@@ -120,6 +120,26 @@ jint ParallelScavengeHeap::initialize() {
     return JNI_ENOMEM;
   }
 
+  // reset swap stats
+  syscall(451);
+  // init majflt region bitmap
+  unsigned long base = (uintptr_t)(young_gen()->reserved().start());
+  unsigned long region_number = 1;
+  unsigned long region_size = young_gen()->reserved().byte_size();
+  syscall(453, base, region_number, region_size);
+  // set bitmap[0]
+  unsigned int mode = 2;
+  unsigned long region_id = 0;
+  syscall(454, mode, region_id);
+  // dump bitmap
+  syscall(454, 999, 0);
+  // print reserved space
+  log_info(gc)("Reserved Space:"
+               " young [" PTR_FORMAT ", " PTR_FORMAT "],"
+               " old [" PTR_FORMAT ", " PTR_FORMAT "]",
+               p2i(young_gen()->reserved().start()), p2i(young_gen()->reserved().end()),
+               p2i(old_gen()->reserved().start()), p2i(old_gen()->reserved().end()));
+
   return JNI_OK;
 }
 
