@@ -244,7 +244,8 @@ HeapWord* ParallelScavengeHeap::mem_allocate(
   // limit is being exceeded as checked below.
   *gc_overhead_limit_was_exceeded = false;
 
-  HeapWord* result = young_gen()->allocate(size);
+  // HeapWord* result = young_gen()->allocate(size);
+  HeapWord* result = old_gen()->cas_allocate_noexpand(size);
 
   uint loop_count = 0;
   uint gc_count = 0;
@@ -266,10 +267,10 @@ HeapWord* ParallelScavengeHeap::mem_allocate(
       MutexLocker ml(Heap_lock);
       gc_count = total_collections();
 
-      result = young_gen()->allocate(size);
-      if (result != NULL) {
-        return result;
-      }
+      // result = young_gen()->allocate(size);
+      // if (result != NULL) {
+      //   return result;
+      // }
 
       // If certain conditions hold, try allocating from the old gen.
       result = mem_allocate_old_gen(size);
@@ -429,13 +430,15 @@ HeapWord* ParallelScavengeHeap::failed_mem_allocate(size_t size) {
   // First level allocation failure, scavenge and allocate in young gen.
   GCCauseSetter gccs(this, GCCause::_allocation_failure);
   const bool invoked_full_gc = PSScavenge::invoke();
-  HeapWord* result = young_gen()->allocate(size);
+  // HeapWord* result = young_gen()->allocate(size);
+  HeapWord* result = old_gen()->allocate(size);
 
   // Second level allocation failure.
   //   Mark sweep and allocate in young generation.
   if (result == NULL && !invoked_full_gc) {
     do_full_collection(false);
-    result = young_gen()->allocate(size);
+    // result = young_gen()->allocate(size);
+    result = old_gen()->allocate(size);
   }
 
   death_march_check(result, size);
@@ -443,22 +446,23 @@ HeapWord* ParallelScavengeHeap::failed_mem_allocate(size_t size) {
   // Third level allocation failure.
   //   After mark sweep and young generation allocation failure,
   //   allocate in old generation.
-  if (result == NULL) {
-    result = old_gen()->allocate(size);
-  }
+  // if (result == NULL) {
+  //   result = old_gen()->allocate(size);
+  // }
 
   // Fourth level allocation failure. We're running out of memory.
   //   More complete mark sweep and allocate in young generation.
   if (result == NULL) {
     do_full_collection(true);
-    result = young_gen()->allocate(size);
+    // result = young_gen()->allocate(size);
+    result = old_gen()->allocate(size);
   }
 
   // Fifth level allocation failure.
   //   After more complete mark sweep, allocate in old generation.
-  if (result == NULL) {
-    result = old_gen()->allocate(size);
-  }
+  // if (result == NULL) {
+  //   result = old_gen()->allocate(size);
+  // }
 
   return result;
 }
@@ -481,7 +485,8 @@ size_t ParallelScavengeHeap::unsafe_max_tlab_alloc(Thread* thr) const {
 }
 
 HeapWord* ParallelScavengeHeap::allocate_new_tlab(size_t min_size, size_t requested_size, size_t* actual_size) {
-  HeapWord* result = young_gen()->allocate(requested_size);
+  // HeapWord* result = young_gen()->allocate(requested_size);
+  HeapWord* result = old_gen()->cas_allocate_noexpand(requested_size);
   if (result != NULL) {
     *actual_size = requested_size;
   }
