@@ -119,7 +119,7 @@ static bool failed_to_reserve_as_requested(char* base, char* requested_address,
 
 void ReservedSpace::initialize(size_t size, size_t alignment, bool large,
                                char* requested_address,
-                               bool executable) {
+                               bool executable) {//hua: todo important actual reservation of memory
   const size_t granularity = os::vm_allocation_granularity();
   assert((size & (granularity - 1)) == 0,
          "size not aligned to os::vm_allocation_granularity()");

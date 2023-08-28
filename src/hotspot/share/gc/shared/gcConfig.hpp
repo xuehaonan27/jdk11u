@@ -52,7 +52,7 @@ public:
   static const char* hs_err_name();
   static const char* hs_err_name(CollectedHeap::Name name);
 
-  static GCArguments* arguments();
+  static GCArguments* arguments(); //hua: todo
 };
 
 #endif // SHARE_GC_SHARED_GCCONFIG_HPP

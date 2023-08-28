@@ -196,7 +196,7 @@ size_t PSOldGen::contiguous_available() const {
 
 // Allocation. We report all successful allocations to the size policy
 // Note that the perm gen does not use this method, and should not!
-HeapWord* PSOldGen::allocate(size_t word_size) {
+HeapWord* PSOldGen::allocate(size_t word_size) { //hua: seems allocation entry of user request
   assert_locked_or_safepoint(Heap_lock);
   HeapWord* res = allocate_noexpand(word_size);
 
@@ -207,7 +207,7 @@ HeapWord* PSOldGen::allocate(size_t word_size) {
   // Allocations in the old generation need to be reported
   if (res != NULL) {
     ParallelScavengeHeap* heap = ParallelScavengeHeap::heap();
-    heap->size_policy()->tenured_allocation(word_size * HeapWordSize);
+    heap->size_policy()->tenured_allocation(word_size * HeapWordSize);//hua:?
   }
 
   return res;

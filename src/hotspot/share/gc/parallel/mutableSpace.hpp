@@ -128,7 +128,7 @@ class MutableSpace: public ImmutableSpace {
   virtual size_t unsafe_max_tlab_alloc(Thread* thr) const { return free_in_bytes();                }
 
   // Allocation (return NULL if full)
-  virtual HeapWord* allocate(size_t word_size);
+  virtual HeapWord* allocate(size_t word_size);//hua:
   virtual HeapWord* cas_allocate(size_t word_size);
   // Optional deallocation. Used in NUMA-allocator.
   bool cas_deallocate(HeapWord *obj, size_t size);

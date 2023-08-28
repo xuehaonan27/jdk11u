@@ -124,7 +124,7 @@ GCTaskQueue* GCTaskQueue::create_on_c_heap() {
 
 GCTaskQueue::GCTaskQueue(bool on_c_heap) :
   _is_c_heap_obj(on_c_heap) {
-  initialize();
+  initialize(); //hua
   if (TraceGCTaskQueue) {
     tty->print_cr("[" INTPTR_FORMAT "]"
                   " GCTaskQueue::GCTaskQueue() constructor",

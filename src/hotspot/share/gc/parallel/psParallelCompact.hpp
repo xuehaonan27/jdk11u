@@ -628,7 +628,7 @@ ParallelCompactData::region_offset(const HeapWord* addr) const
 }
 
 inline size_t
-ParallelCompactData::addr_to_region_idx(const HeapWord* addr) const
+ParallelCompactData::addr_to_region_idx(const HeapWord* addr) const //hua
 {
   assert(addr >= _region_start, "bad addr " PTR_FORMAT " _region_start " PTR_FORMAT, p2i(addr), p2i(_region_start));
   assert(addr <= _region_end, "bad addr " PTR_FORMAT " _region_end " PTR_FORMAT, p2i(addr), p2i(_region_end));
@@ -638,7 +638,7 @@ ParallelCompactData::addr_to_region_idx(const HeapWord* addr) const
 inline ParallelCompactData::RegionData*
 ParallelCompactData::addr_to_region_ptr(const HeapWord* addr) const
 {
-  return region(addr_to_region_idx(addr));
+  return region(addr_to_region_idx(addr));//hua
 }
 
 inline HeapWord*
@@ -941,7 +941,7 @@ class PSParallelCompact : AllStatic {
       _cm = cm;
     }
     template <typename T> void do_oop_work(T* p);
-    virtual void do_oop(oop* p);
+    virtual void do_oop(oop* p);//hua
     virtual void do_oop(narrowOop* p);
 
     // This closure provides its own oop verification code.

@@ -682,8 +682,10 @@ ParallelCompactData::summarize_split_space(size_t src_region,
 
   return source_next;
 }
-
-bool ParallelCompactData::summarize(SplitInfo& split_info,
+//bool result = _summary_data.summarize(_space_info[i].split_info(),//hua
+//                                      space->bottom(), space->top(), NULL,
+//                                      space->bottom(), space->end(), nta);
+bool ParallelCompactData::summarize(SplitInfo& split_info,//hua:?
                                     HeapWord* source_beg, HeapWord* source_end,
                                     HeapWord** source_next,
                                     HeapWord* target_beg, HeapWord* target_end,
@@ -777,7 +779,7 @@ HeapWord* ParallelCompactData::calc_new_pointer(HeapWord* addr, ParCompactionMan
   assert(PSParallelCompact::mark_bitmap()->is_marked(addr), "not marked");
 
   // Region covering the object.
-  RegionData* const region_ptr = addr_to_region_ptr(addr);
+  RegionData* const region_ptr = addr_to_region_ptr(addr);//hua?
   HeapWord* result = region_ptr->destination();
 
   // If the entire Region is live, the new location is region->destination + the
@@ -863,7 +865,7 @@ void PSParallelCompact::post_initialize() {
   ParCompactionManager::initialize(mark_bitmap());
 }
 
-bool PSParallelCompact::initialize() {
+bool PSParallelCompact::initialize() {//hua
   ParallelScavengeHeap* heap = ParallelScavengeHeap::heap();
   MemRegion mr = heap->reserved_region();
 
@@ -875,7 +877,7 @@ bool PSParallelCompact::initialize() {
   initialize_space_info();
   initialize_dead_wood_limiter();
 
-  if (!_mark_bitmap.initialize(mr)) {
+  if (!_mark_bitmap.initialize(mr)) {//hua
     vm_shutdown_during_initialization(
       err_msg("Unable to allocate " SIZE_FORMAT "KB bitmaps for parallel "
       "garbage collection for the requested " SIZE_FORMAT "KB heap.",
@@ -883,7 +885,7 @@ bool PSParallelCompact::initialize() {
     return false;
   }
 
-  if (!_summary_data.initialize(mr)) {
+  if (!_summary_data.initialize(mr)) {//hua
     vm_shutdown_during_initialization(
       err_msg("Unable to allocate " SIZE_FORMAT "KB card tables for parallel "
       "garbage collection for the requested " SIZE_FORMAT "KB heap.",
@@ -1421,12 +1423,12 @@ void PSParallelCompact::summarize_spaces_quick()
 {
   for (unsigned int i = 0; i < last_space_id; ++i) {
     const MutableSpace* space = _space_info[i].space();
-    HeapWord** nta = _space_info[i].new_top_addr();
-    bool result = _summary_data.summarize(_space_info[i].split_info(),
+    HeapWord** nta = _space_info[i].new_top_addr();//hua: just fetch the reference of the _new_top_addr  in SpaceInfo to set it later
+    bool result = _summary_data.summarize(_space_info[i].split_info(),//hua: calculate which reigonsd should be put in which regions
                                           space->bottom(), space->top(), NULL,
                                           space->bottom(), space->end(), nta);
     assert(result, "space must fit into itself");
-    _space_info[i].set_dense_prefix(space->bottom());
+    _space_info[i].set_dense_prefix(space->bottom());//hua?
   }
 }
 
@@ -1596,7 +1598,7 @@ void PSParallelCompact::summary_phase(ParCompactionManager* cm,
 #endif  // #ifdef ASSERT
 
   // Quick summarization of each space into itself, to see how much is live.
-  summarize_spaces_quick();
+  summarize_spaces_quick();//hua
 
   log_develop_trace(gc, compaction)("summary phase:  after summarizing each space to self");
   NOT_PRODUCT(print_region_ranges());
@@ -1716,7 +1718,7 @@ void PSParallelCompact::invoke(bool maximum_heap_compaction) {
 
 // This method contains no policy. You should probably
 // be calling invoke() instead.
-bool PSParallelCompact::invoke_no_policy(bool maximum_heap_compaction) {
+bool PSParallelCompact::invoke_no_policy(bool maximum_heap_compaction) {//hua: invoke mark compact
   assert(SafepointSynchronize::is_at_safepoint(), "must be at a safepoint");
   assert(ref_processor() != NULL, "Sanity");
 
@@ -1794,11 +1796,11 @@ bool PSParallelCompact::invoke_no_policy(bool maximum_heap_compaction) {
     bool marked_for_unloading = false;
 
     marking_start.update();
-    marking_phase(vmthread_cm, maximum_heap_compaction, &_gc_tracer);
+    marking_phase(vmthread_cm, maximum_heap_compaction, &_gc_tracer);//hua:marking
 
     bool max_on_system_gc = UseMaximumCompactionOnSystemGC
       && GCCause::is_user_requested_gc(gc_cause);
-    summary_phase(vmthread_cm, maximum_heap_compaction || max_on_system_gc);
+    summary_phase(vmthread_cm, maximum_heap_compaction || max_on_system_gc);//hua:summary
 
 #if COMPILER2_OR_JVMCI
     assert(DerivedPointerTable::is_active(), "Sanity");
@@ -2064,7 +2066,7 @@ public:
     _q->enqueue(new ThreadRootsMarkingTask(t));
   }
 };
-
+//hua: todo see how it mark objects
 void PSParallelCompact::marking_phase(ParCompactionManager* cm,
                                       bool maximum_heap_compaction,
                                       ParallelOldTracer *gc_tracer) {
@@ -2072,30 +2074,30 @@ void PSParallelCompact::marking_phase(ParCompactionManager* cm,
   GCTraceTime(Info, gc, phases) tm("Marking Phase", &_gc_timer);
 
   ParallelScavengeHeap* heap = ParallelScavengeHeap::heap();
-  uint parallel_gc_threads = heap->gc_task_manager()->workers();
-  uint active_gc_threads = heap->gc_task_manager()->active_workers();
-  TaskQueueSetSuper* qset = ParCompactionManager::stack_array();
-  ParallelTaskTerminator terminator(active_gc_threads, qset);
+  uint parallel_gc_threads = heap->gc_task_manager()->workers(); //?
+  uint active_gc_threads = heap->gc_task_manager()->active_workers();//?
+  TaskQueueSetSuper* qset = ParCompactionManager::stack_array();//?
+  ParallelTaskTerminator terminator(active_gc_threads, qset);//?
 
-  ParCompactionManager::MarkAndPushClosure mark_and_push_closure(cm);
-  ParCompactionManager::FollowStackClosure follow_stack_closure(cm);
+  ParCompactionManager::MarkAndPushClosure mark_and_push_closure(cm);//?
+  ParCompactionManager::FollowStackClosure follow_stack_closure(cm);//?
 
   // Need new claim bits before marking starts.
-  ClassLoaderDataGraph::clear_claimed_marks();
+  ClassLoaderDataGraph::clear_claimed_marks();//?
 
   {
     GCTraceTime(Debug, gc, phases) tm("Par Mark", &_gc_timer);
 
     ParallelScavengeHeap::ParStrongRootsScope psrs;
 
-    GCTaskQueue* q = GCTaskQueue::create();
+    GCTaskQueue* q = GCTaskQueue::create();//hua: an empty queue which is not synchronized
 
-    q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::universe));
-    q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::jni_handles));
+    q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::universe)); //hua: mark from universe, but what is it?
+    q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::jni_handles));//hua: looks like handles of root objs?
     // We scan the thread roots in parallel
-    PCAddThreadRootsMarkingTaskClosure cl(q);
-    Threads::java_threads_and_vm_thread_do(&cl);
-    q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::object_synchronizer));
+    PCAddThreadRootsMarkingTaskClosure cl(q);//hua: this closure is responsible for adding the thread root
+    Threads::java_threads_and_vm_thread_do(&cl);//hua: this stmt add the thread roots of all threads to the queue
+    q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::object_synchronizer));//hua: these are some other roots?
     q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::management));
     q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::system_dictionary));
     q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::class_loader_data));
@@ -2104,7 +2106,7 @@ void PSParallelCompact::marking_phase(ParCompactionManager* cm,
 
     if (active_gc_threads > 1) {
       for (uint j = 0; j < active_gc_threads; j++) {
-        q->enqueue(new StealMarkingTask(&terminator));
+        q->enqueue(new StealMarkingTask(&terminator));//hua?
       }
     }
 
@@ -2173,7 +2175,7 @@ void PSParallelCompact::marking_phase(ParCompactionManager* cm,
   _gc_tracer.report_object_count_after_gc(is_alive_closure());
 }
 
-void PSParallelCompact::adjust_roots(ParCompactionManager* cm) {
+void PSParallelCompact::adjust_roots(ParCompactionManager* cm) {//hua: adjust roots
   // Adjust the pointers to reflect the new locations
   GCTraceTime(Info, gc, phases) tm("Adjust Roots", &_gc_timer);
 

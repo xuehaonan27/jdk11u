@@ -90,7 +90,7 @@ GenCollectedHeap::GenCollectedHeap(GenCollectorPolicy *policy,
   _full_collections_completed(0) {
 }
 
-jint GenCollectedHeap::initialize() {
+jint GenCollectedHeap::initialize() { //hua: todo important!
   // While there are no constraints in the GC code that HeapWordSize
   // be any particular value, there are multiple other areas in the
   // system which believe this to be true (e.g. oop->object_size in some

@@ -685,7 +685,7 @@ jint universe_init() {
 
   JavaClasses::compute_hard_coded_offsets();
 
-  jint status = Universe::initialize_heap();
+  jint status = Universe::initialize_heap();  //hua: the heap is initialized here
   if (status != JNI_OK) {
     return status;
   }
@@ -762,8 +762,8 @@ CollectedHeap* Universe::create_heap() {
 // HeapBased - Use compressed oops with heap base + encoding.
 
 jint Universe::initialize_heap() {
-  _collectedHeap = create_heap();
-  jint status = _collectedHeap->initialize();
+  _collectedHeap = create_heap();  //hua: todo
+  jint status = _collectedHeap->initialize(); //hua: todo
   if (status != JNI_OK) {
     return status;
   }
@@ -842,7 +842,7 @@ void Universe::print_compressed_oops_mode(outputStream* st) {
   st->cr();
 }
 
-ReservedSpace Universe::reserve_heap(size_t heap_size, size_t alignment) {
+ReservedSpace Universe::reserve_heap(size_t heap_size, size_t alignment) { //hua: todo important
 
   assert(alignment <= Arguments::conservative_max_heap_alignment(),
          "actual alignment " SIZE_FORMAT " must be within maximum heap alignment " SIZE_FORMAT,

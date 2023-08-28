@@ -72,14 +72,14 @@ void ParCompactionManager::push_region(size_t index)
 }
 
 template <typename T>
-inline void ParCompactionManager::mark_and_push(T* p) {
-  T heap_oop = RawAccess<>::oop_load(p);
+inline void ParCompactionManager::mark_and_push(T* p) {//hua: the real marking starts here
+  T heap_oop = RawAccess<>::oop_load(p); //hua: for MarkANdPushClosure as caller, T is oop
   if (!CompressedOops::is_null(heap_oop)) {
     oop obj = CompressedOops::decode_not_null(heap_oop);
     assert(ParallelScavengeHeap::heap()->is_in(obj), "should be in heap");
 
-    if (mark_bitmap()->is_unmarked(obj) && PSParallelCompact::mark_obj(obj)) {
-      push(obj);
+    if (mark_bitmap()->is_unmarked(obj) && PSParallelCompact::mark_obj(obj)) {//hua: is not marked, mark it
+      push(obj); //hua: then push it into the stack
     }
   }
 }

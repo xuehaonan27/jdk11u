@@ -35,7 +35,7 @@ class ParCompactionManager;
 class ObjectStartArray;
 class ParallelCompactData;
 class ParMarkBitMap;
-
+//hua: todo
 class ParCompactionManager : public CHeapObj<mtGC> {
   friend class ParallelTaskTerminator;
   friend class ParMarkBitMap;
@@ -81,7 +81,7 @@ private:
   // type of TaskQueue.
   RegionTaskQueue              _region_stack;
 
-  static ParMarkBitMap* _mark_bitmap;
+  static ParMarkBitMap* _mark_bitmap; //hua: parMarkBitMap.hpp
 
   Action _action;
 

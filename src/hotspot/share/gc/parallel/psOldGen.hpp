@@ -79,13 +79,13 @@ class PSOldGen : public CHeapObj<mtGC> {
   }
 #endif
 
-  HeapWord* allocate_noexpand(size_t word_size) {
+  HeapWord* allocate_noexpand(size_t word_size) {//hua: seems used by user allocation request
     // We assume the heap lock is held here.
     assert_locked_or_safepoint(Heap_lock);
-    HeapWord* res = object_space()->allocate(word_size);
+    HeapWord* res = object_space()->allocate(word_size);//hua:here allocate the space of the object
     if (res != NULL) {
       DEBUG_ONLY(assert_block_in_covered_region(MemRegion(res, word_size)));
-      _start_array.allocate_block(res);
+      _start_array.allocate_block(res);//hua:here
     }
     return res;
   }

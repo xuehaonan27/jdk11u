@@ -3551,7 +3551,7 @@ void Threads::java_threads_do(ThreadClosure* tc) {
   }
 }
 
-void Threads::java_threads_and_vm_thread_do(ThreadClosure* tc) {
+void Threads::java_threads_and_vm_thread_do(ThreadClosure* tc) {//hua: here
   assert_locked_or_safepoint(Threads_lock);
   java_threads_do(tc);
   tc->do_thread(VMThread::vm_thread());

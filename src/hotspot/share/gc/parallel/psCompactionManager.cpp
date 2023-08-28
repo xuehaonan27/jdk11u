@@ -58,11 +58,11 @@ ParCompactionManager::ParCompactionManager() :
   ParallelScavengeHeap* heap = ParallelScavengeHeap::heap();
 
   _old_gen = heap->old_gen();
-  _start_array = old_gen()->start_array();
+  _start_array = old_gen()->start_array();//hua: what is start_array?
 
-  marking_stack()->initialize();
-  _objarray_stack.initialize();
-  _region_stack.initialize();
+  marking_stack()->initialize();//?
+  _objarray_stack.initialize();//?
+  _region_stack.initialize();//?
 
   reset_bitmap_query_cache();
 }

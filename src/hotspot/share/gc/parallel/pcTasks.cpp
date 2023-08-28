@@ -67,7 +67,7 @@ void ThreadRootsMarkingTask::do_it(GCTaskManager* manager, uint which) {
 }
 
 
-void MarkFromRootsTask::do_it(GCTaskManager* manager, uint which) {
+void MarkFromRootsTask::do_it(GCTaskManager* manager, uint which) {//hua: here
   assert(ParallelScavengeHeap::heap()->is_gc_active(), "called outside gc");
 
   ParCompactionManager* cm =
@@ -76,18 +76,18 @@ void MarkFromRootsTask::do_it(GCTaskManager* manager, uint which) {
 
   switch (_root_type) {
     case universe:
-      Universe::oops_do(&mark_and_push_closure);
+      Universe::oops_do(&mark_and_push_closure);//hua: apply function to the addresses of all the direct heap pointers maintained
       break;
 
     case jni_handles:
-      JNIHandles::oops_do(&mark_and_push_closure);
+      JNIHandles::oops_do(&mark_and_push_closure);//hua:?
       break;
 
     case threads:
     {
       ResourceMark rm;
-      MarkingCodeBlobClosure each_active_code_blob(&mark_and_push_closure, !CodeBlobToOopClosure::FixRelocations);
-      Threads::oops_do(&mark_and_push_closure, &each_active_code_blob);
+      MarkingCodeBlobClosure each_active_code_blob(&mark_and_push_closure, !CodeBlobToOopClosure::FixRelocations);//hua?
+      Threads::oops_do(&mark_and_push_closure, &each_active_code_blob);//hua?
     }
     break;
 
