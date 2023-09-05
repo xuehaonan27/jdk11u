@@ -768,6 +768,9 @@ jint Universe::initialize_heap() {
     return status;
   }
   log_info(gc)("Using %s", _collectedHeap->name());
+  if (UseParallelFullMarkCompactGC) {
+    log_info(gc)("Using full heap mark compact gc");
+  }
 
   ThreadLocalAllocBuffer::set_max_size(Universe::heap()->max_tlab_size());
 

@@ -1703,7 +1703,7 @@ void PSParallelCompact::invoke(bool maximum_heap_compaction) {
   PSAdaptiveSizePolicy* policy = heap->size_policy();
   IsGCActiveMark mark;
 
-  if (ScavengeBeforeFullGC) {
+  if (ScavengeBeforeFullGC && !UseParallelFullMarkCompactGC) {
     PSScavenge::invoke_no_policy();
   }
 

@@ -244,8 +244,8 @@ HeapWord* ParallelScavengeHeap::mem_allocate(
   // limit is being exceeded as checked below.
   *gc_overhead_limit_was_exceeded = false;
 
-  // HeapWord* result = young_gen()->allocate(size);
-  HeapWord* result = old_gen()->cas_allocate_noexpand(size);
+  HeapWord* result = !UseParallelFullMarkCompactGC ? young_gen()->allocate(size)
+                                                   : old_gen()->cas_allocate_noexpand(size);
 
   uint loop_count = 0;
   uint gc_count = 0;
@@ -267,10 +267,10 @@ HeapWord* ParallelScavengeHeap::mem_allocate(
       MutexLocker ml(Heap_lock);
       gc_count = total_collections();
 
-      // result = young_gen()->allocate(size);
-      // if (result != NULL) {
-      //   return result;
-      // }
+      result = !UseParallelFullMarkCompactGC ? young_gen()->allocate(size) : NULL;
+      if (result != NULL) {
+        return result;
+      }
 
       // If certain conditions hold, try allocating from the old gen.
       result = mem_allocate_old_gen(size);
@@ -424,72 +424,95 @@ HeapWord* ParallelScavengeHeap::failed_mem_allocate(size_t size) {
   assert(Thread::current() == (Thread*)VMThread::vm_thread(), "should be in vm thread");
   assert(!is_gc_active(), "not reentrant");
   assert(!Heap_lock->owned_by_self(), "this thread should not own the Heap_lock");
+  HeapWord* result = NULL;
 
-  // We assume that allocation in eden will fail unless we collect.
-
-  // First level allocation failure, scavenge and allocate in young gen.
   GCCauseSetter gccs(this, GCCause::_allocation_failure);
-  const bool invoked_full_gc = PSScavenge::invoke();
-  // HeapWord* result = young_gen()->allocate(size);
-  HeapWord* result = old_gen()->allocate(size);
 
-  // Second level allocation failure.
-  //   Mark sweep and allocate in young generation.
-  if (result == NULL && !invoked_full_gc) {
+  if (!UseParallelFullMarkCompactGC) {
+    // Policy of PS gc:
+    // We assume that allocation in eden will fail unless we collect.
+    // First level allocation failure, scavenge and allocate in young gen.
+    const bool invoked_full_gc = PSScavenge::invoke();
+    result = young_gen()->allocate(size);
+
+    // Second level allocation failure.
+    //   Mark sweep and allocate in young generation.
+    if (result == NULL && !invoked_full_gc) {
+      do_full_collection(false);
+      result = young_gen()->allocate(size);
+    }
+
+    death_march_check(result, size);
+
+    // Third level allocation failure.
+    //   After mark sweep and young generation allocation failure,
+    //   allocate in old generation.
+    if (result == NULL) {
+      result = old_gen()->allocate(size);
+    }
+
+    // Fourth level allocation failure. We're running out of memory.
+    //   More complete mark sweep and allocate in young generation.
+    if (result == NULL) {
+      do_full_collection(true);
+      result = young_gen()->allocate(size);
+    }
+
+    // Fifth level allocation failure.
+    //   After more complete mark sweep, allocate in old generation.
+    if (result == NULL) {
+      result = old_gen()->allocate(size);
+    }
+  
+  } else {
+    // Policy of full heap mark compact gc:
+    // First level allocation failure, Mark sweep allocate in old gen.
     do_full_collection(false);
-    // result = young_gen()->allocate(size);
     result = old_gen()->allocate(size);
+
+    death_march_check(result, size);
+
+    // Second level allocation failure. We're running out of memory.
+    //   More complete mark sweep and allocate in old generation.
+    if (result == NULL) {
+      do_full_collection(true);
+      result = old_gen()->allocate(size);
+    }
+
+    // Third level allocation failure.
+    //   After more complete mark sweep, allocate in old generation.
+    if (result == NULL) {
+      result = old_gen()->allocate(size);
+    }
+
   }
-
-  death_march_check(result, size);
-
-  // Third level allocation failure.
-  //   After mark sweep and young generation allocation failure,
-  //   allocate in old generation.
-  // if (result == NULL) {
-  //   result = old_gen()->allocate(size);
-  // }
-
-  // Fourth level allocation failure. We're running out of memory.
-  //   More complete mark sweep and allocate in young generation.
-  if (result == NULL) {
-    do_full_collection(true);
-    // result = young_gen()->allocate(size);
-    result = old_gen()->allocate(size);
-  }
-
-  // Fifth level allocation failure.
-  //   After more complete mark sweep, allocate in old generation.
-  // if (result == NULL) {
-  //   result = old_gen()->allocate(size);
-  // }
 
   return result;
 }
 
 void ParallelScavengeHeap::ensure_parsability(bool retire_tlabs) {
   CollectedHeap::ensure_parsability(retire_tlabs);
-  // young_gen()->eden_space()->ensure_parsability();
+  if (!UseParallelFullMarkCompactGC) { young_gen()->eden_space()->ensure_parsability(); }
 }
 
 size_t ParallelScavengeHeap::tlab_capacity(Thread* thr) const {
-  // return young_gen()->eden_space()->tlab_capacity(thr);
-  return old_gen()->capacity_in_bytes();
+  return !UseParallelFullMarkCompactGC ? young_gen()->eden_space()->tlab_capacity(thr)
+                                       : old_gen()->capacity_in_bytes();
 }
 
 size_t ParallelScavengeHeap::tlab_used(Thread* thr) const {
-  // return young_gen()->eden_space()->tlab_used(thr);
-  return old_gen()->used_in_bytes();
+  return !UseParallelFullMarkCompactGC ? young_gen()->eden_space()->tlab_used(thr)
+                                       : old_gen()->used_in_bytes();
 }
 
 size_t ParallelScavengeHeap::unsafe_max_tlab_alloc(Thread* thr) const {
-  // return young_gen()->eden_space()->unsafe_max_tlab_alloc(thr);
-  return old_gen()->free_in_bytes();
+  return !UseParallelFullMarkCompactGC ? young_gen()->eden_space()->unsafe_max_tlab_alloc(thr)
+                                       : old_gen()->free_in_bytes();
 }
 
 HeapWord* ParallelScavengeHeap::allocate_new_tlab(size_t min_size, size_t requested_size, size_t* actual_size) {
-  // HeapWord* result = young_gen()->allocate(requested_size);
-  HeapWord* result = old_gen()->cas_allocate_noexpand(requested_size);
+  HeapWord* result = !UseParallelFullMarkCompactGC ? young_gen()->allocate(requested_size)
+                                                   : old_gen()->cas_allocate_noexpand(requested_size);
   if (result != NULL) {
     *actual_size = requested_size;
   }
