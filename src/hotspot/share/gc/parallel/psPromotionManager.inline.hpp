@@ -36,6 +36,8 @@
 #include "oops/access.inline.hpp"
 #include "oops/oop.inline.hpp"
 
+#include "utilities/exceptions.hpp"
+
 inline PSPromotionManager* PSPromotionManager::manager_array(uint index) {
   assert(_manager_array != NULL, "access of NULL manager_array");
   assert(index <= ParallelGCThreads, "out of range manager_array access");
@@ -127,9 +129,9 @@ inline oop PSPromotionManager::copy_to_survivor_space(oop o) {
     uint age = (test_mark->has_displaced_mark_helper() /* o->has_displaced_mark() */) ?
       test_mark->displaced_mark_helper()->age() : test_mark->age();
 
-    if (!promote_immediately) {
+    if (UseParallelFullScavengeGC || !promote_immediately) {
       // Try allocating obj in to-space (unless too old)
-      if (age < PSScavenge::tenuring_threshold()) {
+      if (UseParallelFullScavengeGC || age < PSScavenge::tenuring_threshold()) {
         new_obj = (oop) _young_lab.allocate(new_obj_size);
         if (new_obj == NULL && !_young_gen_is_full) {
           // Do we allocate directly, or flush and refill?
@@ -157,6 +159,21 @@ inline oop PSPromotionManager::copy_to_survivor_space(oop o) {
 
     // Otherwise try allocating obj tenured
     if (new_obj == NULL) {
+      // throw oom error
+      if (UseParallelFullScavengeGC) {
+        Thread* THREAD = Thread::current();
+        // -XX:+HeapDumpOnOutOfMemoryError and -XX:OnOutOfMemoryError support
+        report_java_out_of_memory("GC overhead limit exceeded (psnew promotion failed)");
+
+        if (JvmtiExport::should_post_resource_exhausted()) {
+          JvmtiExport::post_resource_exhausted(
+            JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR | JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP,
+            "GC overhead limit exceeded (psnew promotion failed)");
+        }
+
+        THROW_OOP_(Universe::out_of_memory_error_gc_overhead_limit(), NULL);
+      }
+
 #ifndef PRODUCT
       if (ParallelScavengeHeap::heap()->promotion_should_fail()) {
         return oop_promotion_failed(o, test_mark);
@@ -221,7 +238,7 @@ inline oop PSPromotionManager::copy_to_survivor_space(oop o) {
       // Increment age if obj still in new generation. Now that
       // we're dealing with a markOop that cannot change, it is
       // okay to use the non mt safe oop methods.
-      if (!new_obj_is_tenured) {
+      if (!UseParallelFullScavengeGC && !new_obj_is_tenured) {
         new_obj->incr_age();
         assert(young_space()->contains(new_obj), "Attempt to push non-promoted obj");
       }

@@ -273,7 +273,7 @@ HeapWord* ParallelScavengeHeap::mem_allocate(
       }
 
       // If certain conditions hold, try allocating from the old gen.
-      result = mem_allocate_old_gen(size);
+      result = !UseParallelFullScavengeGC ? mem_allocate_old_gen(size) : NULL;
       if (result != NULL) {
         return result;
       }
@@ -428,7 +428,64 @@ HeapWord* ParallelScavengeHeap::failed_mem_allocate(size_t size) {
 
   GCCauseSetter gccs(this, GCCause::_allocation_failure);
 
-  if (!UseParallelFullMarkCompactGC) {
+  if (UseParallelFullScavengeGC) {
+    // Policy of full heap scavenge gc:
+    // We assume that allocation in eden will fail unless we collect.
+    // First level allocation failure, scavenge and allocate in young gen.
+    const bool invoked_full_gc = PSScavenge::invoke();
+    result = young_gen()->allocate(size);
+
+    // Second level allocation failure.
+    //   Scavenge and allocate in young generation.
+    if (result == NULL && !invoked_full_gc) {
+      PSScavenge::invoke();
+      result = young_gen()->allocate(size);
+    }
+
+    death_march_check(result, size);
+
+    // Third level allocation failure.
+    //   After scavenge and young generation allocation failure,
+    //   allocate in young generation.
+    if (result == NULL) {
+      result = young_gen()->allocate(size);
+    }
+
+    // Fourth level allocation failure. We're running out of memory.
+    //   More scavenge and allocate in young generation.
+    if (result == NULL) {
+      PSScavenge::invoke();
+      result = young_gen()->allocate(size);
+    }
+
+    // Fifth level allocation failure.
+    //   After more scavenge, allocate in young generation.
+    if (result == NULL) {
+      result = young_gen()->allocate(size);
+    }
+
+  } else if (UseParallelFullMarkCompactGC) {
+    // Policy of full heap mark compact gc:
+    // First level allocation failure, Mark sweep allocate in old gen.
+    do_full_collection(false);
+    result = old_gen()->allocate(size);
+
+    death_march_check(result, size);
+
+    // Second level allocation failure. We're running out of memory.
+    //   More complete mark sweep and allocate in old generation.
+    if (result == NULL) {
+      do_full_collection(true);
+      result = old_gen()->allocate(size);
+    }
+
+    // Third level allocation failure.
+    //   After more complete mark sweep, allocate in old generation.
+    if (result == NULL) {
+      result = old_gen()->allocate(size);
+    }
+
+  } else {
     // Policy of PS gc:
     // We assume that allocation in eden will fail unless we collect.
     // First level allocation failure, scavenge and allocate in young gen.
@@ -463,28 +520,7 @@ HeapWord* ParallelScavengeHeap::failed_mem_allocate(size_t size) {
     if (result == NULL) {
       result = old_gen()->allocate(size);
     }
-  
-  } else {
-    // Policy of full heap mark compact gc:
-    // First level allocation failure, Mark sweep allocate in old gen.
-    do_full_collection(false);
-    result = old_gen()->allocate(size);
-
-    death_march_check(result, size);
-
-    // Second level allocation failure. We're running out of memory.
-    //   More complete mark sweep and allocate in old generation.
-    if (result == NULL) {
-      do_full_collection(true);
-      result = old_gen()->allocate(size);
-    }
-
-    // Third level allocation failure.
-    //   After more complete mark sweep, allocate in old generation.
-    if (result == NULL) {
-      result = old_gen()->allocate(size);
-    }
-
+ 
   }
 
   return result;
