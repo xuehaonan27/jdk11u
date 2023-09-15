@@ -497,7 +497,7 @@ void ParallelScavengeHeap::ensure_parsability(bool retire_tlabs) {
 
 size_t ParallelScavengeHeap::tlab_capacity(Thread* thr) const {
   return !UseParallelFullMarkCompactGC ? young_gen()->eden_space()->tlab_capacity(thr)
-                                       : old_gen()->capacity_in_bytes();
+                                       : old_gen()->free_in_bytes();
 }
 
 size_t ParallelScavengeHeap::tlab_used(Thread* thr) const {
