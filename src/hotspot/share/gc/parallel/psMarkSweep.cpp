@@ -339,6 +339,9 @@ bool PSMarkSweep::invoke_no_policy(bool clear_all_softrefs) {
     }
 
     heap->resize_all_tlabs();
+    if (UseParallelFullMarkCompactGC) {
+      old_gen->record_used();
+    }
 
     // We collected the heap, recalculate the metaspace capacity
     MetaspaceGC::compute_new_size();

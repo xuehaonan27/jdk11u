@@ -1892,6 +1892,9 @@ bool PSParallelCompact::invoke_no_policy(bool maximum_heap_compaction) {
     }
 
     heap->resize_all_tlabs();
+    if (UseParallelFullMarkCompactGC) {
+      old_gen->record_used();
+    }
 
     // Resize the metaspace capacity after a collection
     MetaspaceGC::compute_new_size();

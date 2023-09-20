@@ -62,6 +62,10 @@ class PSOldGen : public CHeapObj<mtGC> {
   // Used when initializing the _name field.
   static inline const char* select_name();
 
+  // Record old gen usage the end of full gc.
+  // Used to get the size of space that used by new objects in old gen between full gcs.
+  size_t _last_used_in_bytes;
+
 #ifdef ASSERT
   void assert_block_in_covered_region(MemRegion new_memregion) {
     // Explictly capture current covered_region in a local
@@ -176,6 +180,9 @@ class PSOldGen : public CHeapObj<mtGC> {
   size_t capacity_in_words() const        { return object_space()->capacity_in_words(); }
   size_t used_in_words() const            { return object_space()->used_in_words(); }
   size_t free_in_words() const            { return object_space()->free_in_words(); }
+
+  void record_used();
+  size_t last_used_in_bytes() const { return _last_used_in_bytes; }
 
   // Includes uncommitted memory
   size_t contiguous_available() const;

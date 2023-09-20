@@ -502,7 +502,7 @@ size_t ParallelScavengeHeap::tlab_capacity(Thread* thr) const {
 
 size_t ParallelScavengeHeap::tlab_used(Thread* thr) const {
   return !UseParallelFullMarkCompactGC ? young_gen()->eden_space()->tlab_used(thr)
-                                       : old_gen()->used_in_bytes();
+                                       : old_gen()->used_in_bytes() - old_gen()->last_used_in_bytes();
 }
 
 size_t ParallelScavengeHeap::unsafe_max_tlab_alloc(Thread* thr) const {
