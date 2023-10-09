@@ -1154,7 +1154,7 @@ HeapWord* CompactibleFreeListSpace::block_start_careful(const void* p) const {
   return _bt.block_start_careful(p);
 }
 
-size_t CompactibleFreeListSpace::block_size(const HeapWord* p) const {
+size_t CompactibleFreeListSpace::block_size(const HeapWord* p) const {//hua
   NOT_PRODUCT(verify_objects_initialized());
   // This must be volatile, or else there is a danger that the compiler
   // will compile the code below into a sometimes-infinite loop, by keeping
@@ -1372,13 +1372,13 @@ CompactibleFreeListSpace::getChunkFromSmallLinearAllocBlockRemainder(size_t size
   return getChunkFromLinearAllocBlockRemainder(&_smallLinearAllocBlock, size);
 }
 
-HeapWord* CompactibleFreeListSpace::allocate(size_t size) {
+HeapWord* CompactibleFreeListSpace::allocate(size_t size) {//hua
   assert_lock_strong(freelistLock());
   HeapWord* res = NULL;
   assert(size == adjustObjectSize(size),
          "use adjustObjectSize() before calling into allocate()");
 
-  res = allocate_adaptive_freelists(size);
+  res = allocate_adaptive_freelists(size);//hua
 
   if (res != NULL) {
     // check that res does lie in this space!
@@ -1407,7 +1407,7 @@ HeapWord* CompactibleFreeListSpace::allocate(size_t size) {
   return res;
 }
 
-HeapWord* CompactibleFreeListSpace::allocate_adaptive_freelists(size_t size) {
+HeapWord* CompactibleFreeListSpace::allocate_adaptive_freelists(size_t size) {//hua
   assert_lock_strong(freelistLock());
   HeapWord* res = NULL;
   assert(size == adjustObjectSize(size),

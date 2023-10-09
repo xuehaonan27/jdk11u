@@ -134,8 +134,8 @@ class MutableSpace: public ImmutableSpace {
   bool cas_deallocate(HeapWord *obj, size_t size);
 
   // Iteration.
-  void oop_iterate(OopIterateClosure* cl);
-  void object_iterate(ObjectClosure* cl);
+  virtual void oop_iterate(OopIterateClosure* cl);
+  virtual void object_iterate(ObjectClosure* cl);
 
   // Debugging
   virtual void print() const;
