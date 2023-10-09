@@ -6,7 +6,7 @@
 #define SHARE_VM_GC_PARALLEL_DISCONTIGUOUSMUTABLESPACE
 
 #include "gc/parallel/mutableSpace.hpp"
-#include "gc/parallel/chunkFreeList.hpp"
+#include "gc/parallel/freeList.hpp"
 #include "gc/parallel/freeChunk.hpp"
 
 

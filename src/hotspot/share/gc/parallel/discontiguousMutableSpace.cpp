@@ -4,9 +4,9 @@
 
 // This version requires locking. */
 
-#include "share/gc/parallel/freeList.hpp"
-#include "share/gc/parallel/freeList.inline.hpp"
-#include "share/gc/parallel/discontiguosMutableSpace.hpp"
+#include "gc/parallel/freeList.hpp"
+#include "gc/parallel/freeList.inline.hpp"
+#include "gc/parallel/discontiguousMutableSpace.hpp"
 
 size_t MinChunkSize = 0;
 size_t _min_chunk_size_in_bytes = 0;
