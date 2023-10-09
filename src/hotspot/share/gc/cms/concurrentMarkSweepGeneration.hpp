@@ -1126,7 +1126,7 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
   void reset_after_compaction();
 
   // Allocation support
-  HeapWord* allocate(size_t size, bool tlab);
+  HeapWord* allocate(size_t size, bool tlab);//hua: allocate
   HeapWord* have_lock_and_allocate(size_t size, bool tlab);
   oop       promote(oop obj, size_t obj_size);
   HeapWord* par_allocate(size_t size, bool tlab) {

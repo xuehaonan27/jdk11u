@@ -15,8 +15,11 @@ class DiscontiguousMutableSpace : public MutableSpace {
 
 private:
     void set_ps_values();
+    FreeList<FreeChunk> freeList;
 
 public:
+    static void set_chunk_values();
+
     virtual HeapWord* allocate(size_t word_size);
 
     // Iteration.
@@ -28,6 +31,11 @@ public:
     inline static size_t adjustObjectSize(size_t size) {
         return align_object_size(MAX2(size, (size_t)MinChunkSize));
     }
+
+    virtual void initialize(MemRegion mr,
+                            bool clear_space,
+                            bool mangle_space,
+                            bool setup_pages = SetupPages);
 };
 
 #endif //SHARE_VM_GC_PARALLEL_DISCONTIGUOUSMUTABLESPACE

@@ -813,7 +813,7 @@ HeapWord* ConcurrentMarkSweepGeneration::have_lock_and_allocate(size_t size,
                                                                 bool   tlab /* ignored */) {
   assert_lock_strong(freelistLock());
   size_t adjustedSize = CompactibleFreeListSpace::adjustObjectSize(size);
-  HeapWord* res = cmsSpace()->allocate(adjustedSize);
+  HeapWord* res = cmsSpace()->allocate(adjustedSize);//hua
   // Allocate the object live (grey) if the background collector has
   // started marking. This is necessary because the marker may
   // have passed this address and consequently this object will
@@ -828,7 +828,7 @@ HeapWord* ConcurrentMarkSweepGeneration::have_lock_and_allocate(size_t size,
     // to be safely navigable by block_start().
     assert(oop(res)->klass_or_null() == NULL, "Object should be uninitialized here.");
     assert(!((FreeChunk*)res)->is_free(), "Error, block will look free but show wrong size");
-    collector()->direct_allocated(res, adjustedSize);
+    collector()->direct_allocated(res, adjustedSize);//hua:?
     _direct_allocated_words += adjustedSize;
     // allocation counters
     NOT_PRODUCT(
@@ -5304,7 +5304,7 @@ void CMSCollector::sweep() {
     {
       CMSTokenSyncWithLocks ts(true, _cmsGen->freelistLock(),
                                bitMapLock());
-      sweepWork(_cmsGen);
+      sweepWork(_cmsGen);//hua
     }
 
     // Update Universe::_heap_*_at_gc figures.
@@ -5446,13 +5446,13 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
 
   assert(!_inter_sweep_timer.is_active(), "Was switched off in an outer context");
   assert(_intra_sweep_timer.is_active(),  "Was switched on  in an outer context");
-  old_gen->cmsSpace()->beginSweepFLCensus((float)(_inter_sweep_timer.seconds()),
+  old_gen->cmsSpace()->beginSweepFLCensus((float)(_inter_sweep_timer.seconds()), //hua?
                                           _inter_sweep_estimate.padded_average(),
                                           _intra_sweep_estimate.padded_average());
   old_gen->setNearLargestChunk();
 
   {
-    SweepClosure sweepClosure(this, old_gen, &_markBitMap, CMSYield);
+    SweepClosure sweepClosure(this, old_gen, &_markBitMap, CMSYield);//hua: here?
     old_gen->cmsSpace()->blk_iterate_careful(&sweepClosure);
     // We need to free-up/coalesce garbage/blocks from a
     // co-terminal free run. This is done in the SweepClosure
