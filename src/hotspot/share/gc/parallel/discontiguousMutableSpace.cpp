@@ -4,11 +4,19 @@
 
 // This version requires locking. */
 
-#include "gc/parallel/freeList.hpp"
-#include "gc/parallel/freeList.inline.hpp"
+// #include "gc/parallel/orderedFreeList.hpp"
+#include "gc/parallel/orderedFreeList.inline.hpp"
 #include "gc/parallel/discontiguousMutableSpace.hpp"
+#include "memory/iterator.inline.hpp"
+#include "oops/oop.inline.hpp"
+#include "runtime/atomic.hpp"
+#include "runtime/orderAccess.hpp"
+#include "runtime/safepoint.hpp"
+#include "runtime/thread.hpp"
+#include "utilities/align.hpp"
+#include "utilities/macros.hpp"
 
-size_t MinChunkSize = 0;
+size_t MinPSChunkSize = 0;
 size_t _min_chunk_size_in_bytes = 0;
 
 HeapWord* DiscontiguousMutableSpace::allocate(size_t size) {
@@ -20,11 +28,11 @@ HeapWord* DiscontiguousMutableSpace::allocate(size_t size) {
     size_t aligned_size = adjustObjectSize(size);
     FreeChunk* fc = freeList.get_first_match(aligned_size);
     size_t remainder_size = fc->size() - aligned_size;
-    if(remainder_size > MinChunkSize){
+    if(remainder_size > MinPSChunkSize){
         //Should split the chunk
         freeList.remove_chunk(fc);
         FreeChunk* remainder = (FreeChunk*)(((HeapWord*)fc) + aligned_size);
-        remainder->set_mark((markOop)remainder_size);
+        remainder->set_size(remainder_size);
         freeList.insert_chunk(remainder);
         fc->markNotFree();
         HeapWord* obj = (HeapWord*) fc;
@@ -55,32 +63,32 @@ HeapWord* DiscontiguousMutableSpace::allocate(size_t size) {
 void DiscontiguousMutableSpace::initialize(MemRegion mr,
                         bool clear_space,
                         bool mangle_space,
-                        bool setup_pages = SetupPages){
+                        bool setup_pages){
     MutableSpace::initialize(mr, clear_space, mangle_space, setup_pages);
     freeList.initialize();
 }
 
-void DiscontiguousMutableSpace::oop_iterate(OopIterateClosure* cl) {
-    HeapWord* obj_addr = bottom();
-    HeapWord* t = top();
-    // Could call objects iterate, but this is easier.
-    while (obj_addr < t) {
-        obj_addr += oop(obj_addr)->oop_iterate_size(cl);
-    }
-}
+// void DiscontiguousMutableSpace::oop_iterate(OopIterateClosure* cl) {
+//     HeapWord* obj_addr = bottom();
+//     HeapWord* t = top();
+//     // Could call objects iterate, but this is easier.
+//     while (obj_addr < t) {
+//         obj_addr += oop(obj_addr)->oop_iterate_size(cl);
+//     }
+// }
 
 // Apply the given closure to each oop in the space.
 void DiscontiguousMutableSpace::oop_iterate(OopIterateClosure* cl) {
     assert_lock_strong(freelistLock());
-    HeapWord *cur, *limit;
-    size_t curSize;
-    for (cur = bottom(), limit = end(); cur < limit;
-         cur += curSize) {
-        curSize = block_size(cur);
-        if (block_is_obj(cur)) {
-            oop(cur)->oop_iterate(cl);
-        }
-    }
+    // HeapWord *cur, *limit;
+    // size_t curSize;
+    // for (cur = bottom(), limit = end(); cur < limit;
+    //      cur += curSize) {
+    //     curSize = block_size(cur);
+    //     if (block_is_obj(cur)) {
+    //         oop(cur)->oop_iterate(cl);
+    //     }
+    // }
 }
 
 void DiscontiguousMutableSpace::object_iterate(ObjectClosure* cl) {
@@ -91,19 +99,6 @@ void DiscontiguousMutableSpace::object_iterate(ObjectClosure* cl) {
     }
 }
 
-void DiscontiguousMutableSpace::set_ps_values() {
-    // Set CMS global values
-    assert(MinChunkSize == 0, "already set");
-
-    // MinChunkSize should be a multiple of MinObjAlignment and be large enough
-    // for chunks to contain a FreeChunk.
-    _min_chunk_size_in_bytes = align_up(sizeof(FreeChunk), MinObjAlignmentInBytes);
-    MinChunkSize = _min_chunk_size_in_bytes / BytesPerWord;
-
-    assert(IndexSetStart == 0 && IndexSetStride == 0, "already set");
-    IndexSetStart  = MinChunkSize;
-    IndexSetStride = MinObjAlignment;
-}
 
 size_t DiscontiguousMutableSpace::block_size(const HeapWord* p) const {//hua
     NOT_PRODUCT(verify_objects_initialized());
@@ -151,10 +146,10 @@ size_t DiscontiguousMutableSpace::block_size(const HeapWord* p) const {//hua
 
 void DiscontiguousMutableSpace::set_chunk_values() {
     // Set CMS global values
-    assert(MinChunkSize == 0, "already set");
+    assert(MinPSChunkSize == 0, "already set");
 
     // MinChunkSize should be a multiple of MinObjAlignment and be large enough
     // for chunks to contain a FreeChunk.
     _min_chunk_size_in_bytes = align_up(sizeof(FreeChunk), MinObjAlignmentInBytes);
-    MinChunkSize = _min_chunk_size_in_bytes / BytesPerWord;
+    MinPSChunkSize = _min_chunk_size_in_bytes / BytesPerWord;
 }

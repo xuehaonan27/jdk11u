@@ -26,13 +26,13 @@
  *
  */
 
-#ifndef SHARE_VM_GC_PARALLEL_FREELIST_HPP
-#define SHARE_VM_GC_PARALLEL_FREELIST_HPP
+#ifndef SHARE_VM_GC_PARALLEL_OrderedFreeList_HPP
+#define SHARE_VM_GC_PARALLEL_OrderedFreeList_HPP
 
-// A class for maintaining a free list of Chunk's.  The FreeList
+// A class for maintaining a free list of Chunk's.  The OrderedFreeList
 // maintains a the structure of the list (head, tail, etc.) plus
 // statistics for allocations from the list.  The links between items
-// are not part of FreeList.  The statistics are
+// are not part of OrderedFreeList.  The statistics are
 // used to make decisions about coalescing Chunk's when they
 // are swept during collection.
 //
@@ -40,7 +40,7 @@
 // for that implementation.
 
 template <class Chunk_t>
-class FreeList {
+class OrderedFreeList {
     friend class CompactibleFreeListSpace;
     friend class VMStructs;
 
@@ -56,6 +56,11 @@ protected:
   void assert_proper_lock_protection_work() const;
 #endif
 
+    // Asserts false if the protecting lock (if any) is not held.
+    void assert_proper_lock_protection() const {
+        DEBUG_ONLY(assert_proper_lock_protection_work());
+    }
+
     void increment_count()    {
         _count++;
     }
@@ -68,7 +73,7 @@ protected:
 public:
     // Constructor
     // Construct a list without any entries.
-    FreeList();
+    OrderedFreeList();
 
     // Do initialization
     void initialize();
@@ -134,7 +139,7 @@ public:
 
     // Remove the first "n" or "count", whichever is smaller, chunks from the
     // list, setting "fl", which is required to be empty, to point to them.
-    void getFirstNChunksFromList(size_t n, FreeList<Chunk_t>* fl);
+    void getFirstNChunksFromList(size_t n, OrderedFreeList<Chunk_t>* fl);
 
     // Unlink this chunk from it's free list
     void remove_chunk(Chunk_t* fc);
@@ -151,7 +156,7 @@ public:
 
     // Prepend "fl" (whose size is required to be the same as that of "this")
     // to the front of "this" list.
-    void prepend(FreeList<Chunk_t>* fl);
+    void prepend(OrderedFreeList<Chunk_t>* fl);
 
     // Verify that the chunk is in the list.
     // found.  Return NULL if "fc" is not found.
@@ -162,4 +167,4 @@ public:
     void print_on(outputStream* st, const char* c = NULL) const;
 };
 
-#endif // SHARE_VM_GC_PARALLEL_FREELIST_HPP
+#endif // SHARE_VM_GC_PARALLEL_OrderedFreeList_HPP

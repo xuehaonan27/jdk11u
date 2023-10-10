@@ -145,7 +145,7 @@ class FreeChunk {
   void print_on(outputStream* st);
 };
 
-extern size_t MinChunkSize;
+extern size_t MinPSChunkSize;
 
 
 #endif // SHARE_VM_GC_PARALLEL_FREECHUNK_HPP

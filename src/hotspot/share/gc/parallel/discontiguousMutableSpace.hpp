@@ -6,7 +6,7 @@
 #define SHARE_VM_GC_PARALLEL_DISCONTIGUOUSMUTABLESPACE
 
 #include "gc/parallel/mutableSpace.hpp"
-#include "gc/parallel/freeList.hpp"
+#include "gc/parallel/orderedFreeList.hpp"
 #include "gc/parallel/freeChunk.hpp"
 
 
@@ -14,8 +14,7 @@ class DiscontiguousMutableSpace : public MutableSpace {
     friend class VMStructs;
 
 private:
-    void set_ps_values();
-    FreeList<FreeChunk> freeList;
+    OrderedFreeList<FreeChunk> freeList;
 
 public:
     static void set_chunk_values();
@@ -29,9 +28,10 @@ public:
     // Adjust the chunk for the minimum size.  This version is called in
     // most cases in CompactibleFreeListSpace methods.
     inline static size_t adjustObjectSize(size_t size) {
-        return align_object_size(MAX2(size, (size_t)MinChunkSize));
+        return align_object_size(MAX2(size, (size_t)MinPSChunkSize));
     }
 
+    size_t block_size(const HeapWord* p) const;
     virtual void initialize(MemRegion mr,
                             bool clear_space,
                             bool mangle_space,

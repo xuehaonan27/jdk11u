@@ -22,11 +22,11 @@
  *
  */
 
-#ifndef SHARE_VM_GC_PARALLEL_FREELIST_INLINE_HPP
-#define SHARE_VM_GC_PARALLEL_FREELIST_INLINE_HPP
+#ifndef SHARE_VM_GC_PARALLEL_OrderedFreeList_INLINE_HPP
+#define SHARE_VM_GC_PARALLEL_OrderedFreeList_INLINE_HPP
 
 #include "gc/shared/collectedHeap.hpp"
-#include "gc/parallel/freeList.hpp"
+#include "gc/parallel/orderedFreeList.hpp"
 #include "runtime/globals.hpp"
 #include "runtime/mutex.hpp"
 #include "runtime/vmThread.hpp"
@@ -39,7 +39,7 @@
 // maintain a FIFO queue.
 
 template <class Chunk>
-FreeList<Chunk>::FreeList() :
+OrderedFreeList<Chunk>::OrderedFreeList() :
         _head(NULL), _tail(NULL)
 #ifdef ASSERT
 , _protecting_lock(NULL)
@@ -49,7 +49,7 @@ FreeList<Chunk>::FreeList() :
 }
 
 template <class Chunk>
-void FreeList<Chunk>::link_head(Chunk* v) {
+void OrderedFreeList<Chunk>::link_head(Chunk* v) {
     assert_proper_lock_protection();
     set_head(v);
     // If this method is not used (just set the head instead),
@@ -62,7 +62,7 @@ void FreeList<Chunk>::link_head(Chunk* v) {
 
 
 template <class Chunk>
-void FreeList<Chunk>::reset() {
+void OrderedFreeList<Chunk>::reset() {
     // Don't set the _size to 0 because this method is
     // used with a existing list that has a size but which has
     // been emptied.
@@ -73,7 +73,7 @@ void FreeList<Chunk>::reset() {
 }
 
 template <class Chunk>
-void FreeList<Chunk>::initialize() {
+void OrderedFreeList<Chunk>::initialize() {
 #ifdef ASSERT
     // Needed early because it might be checked in other initializing code.
   set_protecting_lock(NULL);
@@ -82,7 +82,7 @@ void FreeList<Chunk>::initialize() {
 }
 
 template <class Chunk_t>
-Chunk_t* FreeList<Chunk_t>::get_chunk_at_head() {
+Chunk_t* OrderedFreeList<Chunk_t>::get_chunk_at_head() {
     assert_proper_lock_protection();
     assert(head() == NULL || head()->prev() == NULL, "list invariant");
     assert(tail() == NULL || tail()->next() == NULL, "list invariant");
@@ -106,7 +106,7 @@ Chunk_t* FreeList<Chunk_t>::get_chunk_at_head() {
 
 
 template <class Chunk>
-void FreeList<Chunk>::getFirstNChunksFromList(size_t n, FreeList<Chunk>* fl) {
+void OrderedFreeList<Chunk>::getFirstNChunksFromList(size_t n, OrderedFreeList<Chunk>* fl) {
     assert_proper_lock_protection();
     assert(fl->count() == 0, "Precondition");
     if (count() > 0) {
@@ -137,7 +137,7 @@ void FreeList<Chunk>::getFirstNChunksFromList(size_t n, FreeList<Chunk>* fl) {
 
 // Remove this chunk from the list
 template <class Chunk>
-void FreeList<Chunk>::remove_chunk(Chunk*fc) {
+void OrderedFreeList<Chunk>::remove_chunk(Chunk*fc) {
     assert_proper_lock_protection();
     assert(head() != NULL, "Remove from empty list");
     assert(fc != NULL, "Remove a NULL chunk");
@@ -177,7 +177,7 @@ void FreeList<Chunk>::remove_chunk(Chunk*fc) {
 
 // Insert this chunk to the list
 template <class Chunk>
-void FreeList<Chunk>::insert_chunk(Chunk*fc) {
+void OrderedFreeList<Chunk>::insert_chunk(Chunk*fc) {
     assert_proper_lock_protection();
     assert(fc != NULL, "Insert a NULL chunk");
     assert(fc->is_free(), "Should be a free chunk")
@@ -230,7 +230,7 @@ void FreeList<Chunk>::insert_chunk(Chunk*fc) {
 
 // Add this chunk at the head of the list.
 template <class Chunk>
-void FreeList<Chunk>::return_chunk_at_head(Chunk* chunk, bool record_return) {
+void OrderedFreeList<Chunk>::return_chunk_at_head(Chunk* chunk, bool record_return) {
     assert_proper_lock_protection();
     assert(chunk != NULL, "insert a NULL chunk");
     assert(head() == NULL || head()->prev() == NULL, "list invariant");
@@ -250,14 +250,14 @@ void FreeList<Chunk>::return_chunk_at_head(Chunk* chunk, bool record_return) {
 }
 
 template <class Chunk>
-void FreeList<Chunk>::return_chunk_at_head(Chunk* chunk) {
+void OrderedFreeList<Chunk>::return_chunk_at_head(Chunk* chunk) {
     assert_proper_lock_protection();
     return_chunk_at_head(chunk, true);
 }
 
 // Add this chunk at the tail of the list.
 template <class Chunk>
-void FreeList<Chunk>::return_chunk_at_tail(Chunk* chunk, bool record_return) {
+void OrderedFreeList<Chunk>::return_chunk_at_tail(Chunk* chunk, bool record_return) {
     assert_proper_lock_protection();
     assert(head() == NULL || head()->prev() == NULL, "list invariant");
     assert(tail() == NULL || tail()->next() == NULL, "list invariant");
@@ -278,12 +278,12 @@ void FreeList<Chunk>::return_chunk_at_tail(Chunk* chunk, bool record_return) {
 }
 
 template <class Chunk>
-void FreeList<Chunk>::return_chunk_at_tail(Chunk* chunk) {
+void OrderedFreeList<Chunk>::return_chunk_at_tail(Chunk* chunk) {
     return_chunk_at_tail(chunk, true);
 }
 
 template <class Chunk>
-void FreeList<Chunk>::prepend(FreeList<Chunk>* fl) {
+void OrderedFreeList<Chunk>::prepend(OrderedFreeList<Chunk>* fl) {
     assert_proper_lock_protection();
     if (fl->count() > 0) {
         if (count() == 0) {
@@ -309,7 +309,7 @@ void FreeList<Chunk>::prepend(FreeList<Chunk>* fl) {
 // verify_chunk_in_free_lists() is used to verify that an item is in this free list.
 // It is used as a debugging aid.
 template <class Chunk>
-bool FreeList<Chunk>::verify_chunk_in_free_list(Chunk* fc) const {
+bool OrderedFreeList<Chunk>::verify_chunk_in_free_list(Chunk* fc) const {
     // This is an internal consistency check, not part of the check that the
     // chunk is in the free lists.
     Chunk* curFC = head();
@@ -325,7 +325,7 @@ bool FreeList<Chunk>::verify_chunk_in_free_list(Chunk* fc) const {
 
 #ifdef ASSERT
 template <class Chunk>
-void FreeList<Chunk>::assert_proper_lock_protection_work() const {
+void OrderedFreeList<Chunk>::assert_proper_lock_protection_work() const {
   // Nothing to do if the list has no assigned protecting lock
   if (protecting_lock() == NULL) {
     return;
@@ -346,7 +346,7 @@ void FreeList<Chunk>::assert_proper_lock_protection_work() const {
 
 // Print the "label line" for free list stats.
 template <class Chunk>
-void FreeList<Chunk>::print_labels_on(outputStream* st, const char* c) {
+void OrderedFreeList<Chunk>::print_labels_on(outputStream* st, const char* c) {
     st->print("%16s\t", c);
     st->print("%14s\t"    "%14s\t"    "%14s\t"    "%14s\t"    "%14s\t"
               "%14s\t"    "%14s\t"    "%14s\t"    "%14s\t"    "%14s\t"    "\n",
@@ -359,7 +359,7 @@ void FreeList<Chunk>::print_labels_on(outputStream* st, const char* c) {
 // otherwise, if the argument is null (the default), then the size of the
 // (free list) block is printed in the first column.
 template <class Chunk_t>
-void FreeList<Chunk_t>::print_on(outputStream* st, const char* c) const {
+void OrderedFreeList<Chunk_t>::print_on(outputStream* st, const char* c) const {
     if (c != NULL) {
         st->print("%16s", c);
     } else {
@@ -368,7 +368,7 @@ void FreeList<Chunk_t>::print_on(outputStream* st, const char* c) const {
 }
 
 template <class Chunk>
-Chunk* FreeList<Chunk>:: get_first_match(size_t size){
+Chunk* OrderedFreeList<Chunk>:: get_first_match(size_t size){
     Chunk* head = this->head();
     Chunk* tail = this->tail();
 
@@ -387,4 +387,4 @@ Chunk* FreeList<Chunk>:: get_first_match(size_t size){
     return NULL;
 }
 
-#endif // SHARE_VM_GC_PARALLEL_FREELIST_INLINE_HPP
+#endif // SHARE_VM_GC_PARALLEL_OrderedFreeList_INLINE_HPP
