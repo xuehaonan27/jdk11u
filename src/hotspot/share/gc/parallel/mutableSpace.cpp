@@ -73,6 +73,8 @@ void MutableSpace::initialize(MemRegion mr,
   assert(Universe::on_page_boundary(mr.start()) && Universe::on_page_boundary(mr.end()),
          "invalid space boundaries");
 
+  log_info(gc)("initialize mutable space");
+
   if (setup_pages && (UseNUMA || AlwaysPreTouch)) {
     // The space may move left and right or expand/shrink.
     // We'd like to enforce the desired page placement.
@@ -183,12 +185,13 @@ HeapWord* MutableSpace::allocate(size_t size) {
          "not locked");
 
   HeapWord* obj = top();
+  log_info(gc)("allocate object");
   if (pointer_delta(end(), obj) >= size) {
     HeapWord* new_top = obj + size;
     set_top(new_top);
     assert(is_object_aligned(obj) && is_object_aligned(new_top),
            "checking alignment");
-    log_info(gc)("allocate object");
+
     return obj;
   } else {
     return NULL;
@@ -197,6 +200,7 @@ HeapWord* MutableSpace::allocate(size_t size) {
 
 // This version is lock-free.
 HeapWord* MutableSpace::cas_allocate(size_t size) {
+    log_info(gc)("cas_allocate object");
   do {
     // Read top before end, else the range check may pass when it shouldn't.
     // If end is read first, other threads may advance end and top such that
@@ -223,6 +227,7 @@ HeapWord* MutableSpace::cas_allocate(size_t size) {
 
 // Try to deallocate previous allocation. Returns true upon success.
 bool MutableSpace::cas_deallocate(HeapWord *obj, size_t size) {
+  log_info(gc)("cas_deallocate object");
   HeapWord* expected_top = obj + size;
   return Atomic::cmpxchg(obj, top_addr(), expected_top) == expected_top;
 }
