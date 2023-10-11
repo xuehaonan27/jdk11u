@@ -200,7 +200,7 @@ HeapWord* MutableSpace::allocate(size_t size) {
 
 // This version is lock-free.
 HeapWord* MutableSpace::cas_allocate(size_t size) {
-    log_info(gc)("cas_allocate object");
+    log_info(gc)("cas_allocate object %u", size);
   do {
     // Read top before end, else the range check may pass when it shouldn't.
     // If end is read first, other threads may advance end and top such that
