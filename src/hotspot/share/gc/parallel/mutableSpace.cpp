@@ -33,6 +33,7 @@
 #include "runtime/thread.hpp"
 #include "utilities/align.hpp"
 #include "utilities/macros.hpp"
+#include "logging/log.hpp"
 
 MutableSpace::MutableSpace(size_t alignment): ImmutableSpace(), _top(NULL), _alignment(alignment) {
   assert(MutableSpace::alignment() % os::vm_page_size() == 0,
@@ -180,12 +181,14 @@ HeapWord* MutableSpace::allocate(size_t size) {
          (SafepointSynchronize::is_at_safepoint() &&
           Thread::current()->is_VM_thread()),
          "not locked");
+
   HeapWord* obj = top();
   if (pointer_delta(end(), obj) >= size) {
     HeapWord* new_top = obj + size;
     set_top(new_top);
     assert(is_object_aligned(obj) && is_object_aligned(new_top),
            "checking alignment");
+    log_info(gc)("allocate object");
     return obj;
   } else {
     return NULL;

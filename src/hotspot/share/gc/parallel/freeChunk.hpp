@@ -55,13 +55,13 @@
 // free blocks. These free blocks have their two LSB's set.
 
 //hua: we reuse the free chunk of cms
-class FreeChunk {
+class PsFreeChunk {
   friend class VMStructs;
   // For 64 bit compressed oops, the markOop encodes both the size and the
-  // indication that this is a FreeChunk and not an object.
+  // indication that this is a PsFreeChunk and not an object.
   volatile size_t   _size;
-  FreeChunk* _prev;
-  FreeChunk* _next;
+  PsFreeChunk* _prev;
+  PsFreeChunk* _next;
 
   markOop mark()     const volatile { return (markOop)_size; }
   void set_mark(markOop m)          { _size = (size_t)m; }
@@ -76,7 +76,7 @@ class FreeChunk {
     // calls.  We really want the read of _mark and _prev from this pointer
     // to be volatile but making the fields volatile causes all sorts of
     // compilation errors.
-    return ((volatile FreeChunk*)addr)->is_free();
+    return ((volatile PsFreeChunk*)addr)->is_free();
   }
 
   bool is_free() const volatile {
@@ -90,10 +90,10 @@ class FreeChunk {
   void dontCoalesce() {
     // the block should be free
     assert(is_free(), "Should look like a free block");
-    _prev = (FreeChunk*)(((intptr_t)_prev) | 0x2);
+    _prev = (PsFreeChunk*)(((intptr_t)_prev) | 0x2);
   }
-  FreeChunk* prev() const {
-    return (FreeChunk*)(((intptr_t)_prev) & ~(0x3));
+  PsFreeChunk* prev() const {
+    return (PsFreeChunk*)(((intptr_t)_prev) & ~(0x3));
   }
 
   debug_only(void* prev_addr() const { return (void*)&_prev; })
@@ -109,16 +109,16 @@ class FreeChunk {
     _size = sz;
   }
 
-  FreeChunk* next()   const { return _next; }
+  PsFreeChunk* next()   const { return _next; }
 
-  void link_after(FreeChunk* ptr) {
+  void link_after(PsFreeChunk* ptr) {
     link_next(ptr);
     if (ptr != NULL) ptr->link_prev(this);
   }
-  void link_next(FreeChunk* ptr) { _next = ptr; }
-  void link_prev(FreeChunk* ptr) {
+  void link_next(PsFreeChunk* ptr) { _next = ptr; }
+  void link_prev(PsFreeChunk* ptr) {
     LP64_ONLY(if (UseCompressedOops) _prev = ptr; else)
-    _prev = (FreeChunk*)((intptr_t)ptr | 0x1);
+    _prev = (PsFreeChunk*)((intptr_t)ptr | 0x1);
   }
   void clear_next()              { _next = NULL; }
   void markNotFree() {
@@ -148,4 +148,4 @@ class FreeChunk {
 extern size_t MinPSChunkSize;
 
 
-#endif // SHARE_VM_GC_PARALLEL_FREECHUNK_HPP
+#endif // SHARE_VM_GC_PARALLEL_FreeChunk_HPP

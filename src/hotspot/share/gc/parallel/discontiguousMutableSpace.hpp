@@ -14,7 +14,11 @@ class DiscontiguousMutableSpace : public MutableSpace {
     friend class VMStructs;
 
 private:
-    OrderedFreeList<FreeChunk> freeList;
+    OrderedFreeList<PsFreeChunk> freeList;
+
+
+    bool block_is_obj(const HeapWord* p) const;
+    size_t block_size(const HeapWord* p) const;
 
 public:
     static void set_chunk_values();
@@ -31,7 +35,6 @@ public:
         return align_object_size(MAX2(size, (size_t)MinPSChunkSize));
     }
 
-    size_t block_size(const HeapWord* p) const;
     virtual void initialize(MemRegion mr,
                             bool clear_space,
                             bool mangle_space,

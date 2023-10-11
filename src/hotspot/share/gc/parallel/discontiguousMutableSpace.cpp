@@ -26,12 +26,12 @@ HeapWord* DiscontiguousMutableSpace::allocate(size_t size) {
            "not locked");
 
     size_t aligned_size = adjustObjectSize(size);
-    FreeChunk* fc = freeList.get_first_match(aligned_size);
+    PsFreeChunk* fc = freeList.get_first_match(aligned_size);
     size_t remainder_size = fc->size() - aligned_size;
     if(remainder_size > MinPSChunkSize){
         //Should split the chunk
         freeList.remove_chunk(fc);
-        FreeChunk* remainder = (FreeChunk*)(((HeapWord*)fc) + aligned_size);
+        PsFreeChunk* remainder = (PsFreeChunk*)(((HeapWord*)fc) + aligned_size);
         remainder->set_size(remainder_size);
         freeList.insert_chunk(remainder);
         fc->markNotFree();
@@ -91,6 +91,31 @@ void DiscontiguousMutableSpace::oop_iterate(OopIterateClosure* cl) {
     // }
 }
 
+// This implementation assumes that the property of "being an object" is
+// stable.  But being a free chunk may not be (because of parallel
+// promotion.)
+bool DiscontiguousMutableSpace::block_is_obj(const HeapWord* p) const {
+    PsFreeChunk* fc = (PsFreeChunk*)p;
+    //todo: 改一下check的方式
+//    assert(is_in_reserved(p), "Should be in space");
+    if (PsFreeChunk::indicatesFreeChunk(p)) return false;
+
+    // The barrier is required to prevent reordering of the free chunk check
+    // and the klass read.
+    OrderAccess::loadload();
+
+    Klass* k = oop(p)->klass_or_null_acquire();
+    if (k != NULL) {
+        // Ignore mark word because it may have been used to
+        // chain together promoted objects (the last one
+        // would have a null value).
+        assert(oopDesc::is_oop(oop(p), true), "Should be an oop");
+        return true;
+    } else {
+        return false;  // Was not an object at the start of collection.
+    }
+}
+
 void DiscontiguousMutableSpace::object_iterate(ObjectClosure* cl) {
     HeapWord* p = bottom();
     while (p < top()) {
@@ -107,8 +132,8 @@ size_t DiscontiguousMutableSpace::block_size(const HeapWord* p) const {//hua
     // the value read the first time in a register.
     while (true) {
         // We must do this until we get a consistent view of the object.
-        if (FreeChunk::indicatesFreeChunk(p)) {
-            volatile FreeChunk* fc = (volatile FreeChunk*)p;
+        if (PsFreeChunk::indicatesFreeChunk(p)) {
+            volatile PsFreeChunk* fc = (volatile PsFreeChunk*)p;
             size_t res = fc->size();
 
             // Bugfix for systems with weak memory model (PPC64/IA64). The
@@ -119,7 +144,7 @@ size_t DiscontiguousMutableSpace::block_size(const HeapWord* p) const {//hua
 
             // If the object is still a free chunk, return the size, else it
             // has been allocated so try again.
-            if (FreeChunk::indicatesFreeChunk(p)) {
+            if (PsFreeChunk::indicatesFreeChunk(p)) {
                 assert(res != 0, "Block size should not be 0");
                 return res;
             }
@@ -150,6 +175,6 @@ void DiscontiguousMutableSpace::set_chunk_values() {
 
     // MinChunkSize should be a multiple of MinObjAlignment and be large enough
     // for chunks to contain a FreeChunk.
-    _min_chunk_size_in_bytes = align_up(sizeof(FreeChunk), MinObjAlignmentInBytes);
+    _min_chunk_size_in_bytes = align_up(sizeof(PsFreeChunk), MinObjAlignmentInBytes);
     MinPSChunkSize = _min_chunk_size_in_bytes / BytesPerWord;
 }
