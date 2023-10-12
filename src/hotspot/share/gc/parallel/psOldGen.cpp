@@ -132,7 +132,7 @@ void PSOldGen::initialize_work(const char* perf_data_name, int level) {
 
 
   _object_space = new MutableSpace(virtual_space()->alignment());
-  log_info(gc)("PsOldObjectSpace: %xl", _object_space);
+  log_info(gc)("PsOldObjectSpace: %p", (void*)_object_space);
 
   if (_object_space == NULL)
     vm_exit_during_initialization("Could not allocate an old gen space");

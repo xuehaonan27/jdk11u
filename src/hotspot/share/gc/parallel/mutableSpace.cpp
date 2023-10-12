@@ -185,7 +185,7 @@ HeapWord* MutableSpace::allocate(size_t size) {
          "not locked");
 
   HeapWord* obj = top();
-  log_info(gc)("allocate object %lu, addr: %xl", size, this);
+  log_info(gc)("allocate object %lu, addr: %p", size, (void*)this);
   if (pointer_delta(end(), obj) >= size) {
     HeapWord* new_top = obj + size;
     set_top(new_top);
@@ -200,7 +200,7 @@ HeapWord* MutableSpace::allocate(size_t size) {
 
 // This version is lock-free.
 HeapWord* MutableSpace::cas_allocate(size_t size) {
-    log_info(gc)("cas_allocate object %lu, addr: %xl", size, this);
+    log_info(gc)("cas_allocate object %lu, addr: %p", size, (void*)this);
   do {
     // Read top before end, else the range check may pass when it shouldn't.
     // If end is read first, other threads may advance end and top such that
