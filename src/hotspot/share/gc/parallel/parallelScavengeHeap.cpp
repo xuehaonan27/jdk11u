@@ -245,7 +245,7 @@ HeapWord* ParallelScavengeHeap::mem_allocate(
   *gc_overhead_limit_was_exceeded = false;
 
   HeapWord* result = !UseParallelFullMarkCompactGC ? young_gen()->allocate(size)
-                                                   : old_gen()->cas_allocate_noexpand(size);
+                                                   : old_gen()->cas_allocate(size);
 
   uint loop_count = 0;
   uint gc_count = 0;
@@ -546,7 +546,7 @@ size_t ParallelScavengeHeap::unsafe_max_tlab_alloc(Thread* thr) const {
 
 HeapWord* ParallelScavengeHeap::allocate_new_tlab(size_t min_size, size_t requested_size, size_t* actual_size) {
   HeapWord* result = !UseParallelFullMarkCompactGC ? young_gen()->allocate(requested_size)
-                                                   : old_gen()->cas_allocate_noexpand(requested_size);
+                                                   : old_gen()->cas_allocate(requested_size);
   if (result != NULL) {
     *actual_size = requested_size;
   }
