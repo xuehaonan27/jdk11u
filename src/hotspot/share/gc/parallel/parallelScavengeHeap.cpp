@@ -470,8 +470,6 @@ HeapWord* ParallelScavengeHeap::failed_mem_allocate(size_t size) {
     do_full_collection(false);
     result = old_gen()->allocate(size);
 
-    death_march_check(result, size);
-
     // Second level allocation failure. We're running out of memory.
     //   More complete mark sweep and allocate in old generation.
     if (result == NULL) {
