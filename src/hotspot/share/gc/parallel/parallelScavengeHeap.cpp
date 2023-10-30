@@ -446,8 +446,6 @@ HeapWord* ParallelScavengeHeap::failed_mem_allocate(size_t size) {
       result = young_gen()->allocate(size);
     }
 
-    death_march_check(result, size);
-
     // Third level allocation failure.
     //   After scavenge and young generation allocation failure,
     //   allocate in young generation.
