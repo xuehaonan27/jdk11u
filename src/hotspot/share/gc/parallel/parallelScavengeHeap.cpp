@@ -267,13 +267,17 @@ HeapWord* ParallelScavengeHeap::mem_allocate(
       MutexLocker ml(Heap_lock);
       gc_count = total_collections();
 
-      result = !UseParallelFullMarkCompactGC ? young_gen()->allocate(size) : NULL;
+      // [psmc] TODO: 
+      //    Though we hold heap lock, call old_gen()->allocate() here still fails
+      //    the Spring bench in DaCapobench. Skip mem_allocate_old_gen afterwards as well.
+      result = !UseParallelFullMarkCompactGC ? young_gen()->allocate(size)
+                                             : old_gen()->cas_allocate(size);
       if (result != NULL) {
         return result;
       }
 
       // If certain conditions hold, try allocating from the old gen.
-      result = !UseParallelFullScavengeGC ? mem_allocate_old_gen(size) : NULL;
+      result = !(UseParallelFullScavengeGC || UseParallelFullMarkCompactGC) ? mem_allocate_old_gen(size) : NULL;
       if (result != NULL) {
         return result;
       }
