@@ -75,7 +75,7 @@ void ConcurrentMarkSweepThread::run_service() {
     log_warning(gc)("Couldn't bind CMS thread to processor " UINTX_FORMAT, CPUForCMSThread);
   }
 
-  while (!should_terminate()) {
+  while (!UseFullParNewGC && !should_terminate()) {
     sleepBeforeNextCycle();
     if (should_terminate()) break;
     GCIdMark gc_id_mark;

@@ -253,6 +253,9 @@ unsigned int GenCollectedHeap::update_full_collections_completed(unsigned int co
 //   was a full collection because a partial collection (would
 //   have) failed and is likely to fail again
 bool GenCollectedHeap::should_try_older_generation_allocation(size_t word_size) const {
+  if (UseFullParNewGC) {
+    return false;
+  }
   size_t young_capacity = _young_gen->capacity_before_gc();
   return    (word_size > heap_word_size(young_capacity))
          || GCLocker::is_active_and_needs_gc()
@@ -261,7 +264,7 @@ bool GenCollectedHeap::should_try_older_generation_allocation(size_t word_size) 
 
 HeapWord* GenCollectedHeap::expand_heap_and_allocate(size_t size, bool   is_tlab) {
   HeapWord* result = NULL;
-  if (_old_gen->should_allocate(size, is_tlab)) {
+  if (!UseFullParNewGC && _old_gen->should_allocate(size, is_tlab)) {
     result = _old_gen->expand_and_allocate(size, is_tlab);
   }
   if (result == NULL) {
@@ -436,7 +439,7 @@ HeapWord* GenCollectedHeap::attempt_allocation(size_t size,
     }
   }
 
-  if (_old_gen->should_allocate(size, is_tlab)) {
+  if (!UseFullParNewGC && _old_gen->should_allocate(size, is_tlab)) {
     res = _old_gen->allocate(size, is_tlab);
   }
 
@@ -705,22 +708,38 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
     return result;   // Could be null if we are out of space.
   } else if (!incremental_collection_will_fail(false /* don't consult_young */)) {
     // Do an incremental collection.
-    do_collection(false,                     // full
-                  false,                     // clear_all_soft_refs
-                  size,                      // size
-                  is_tlab,                   // is_tlab
-                  GenCollectedHeap::OldGen); // max_generation
+    if (UseFullParNewGC) {
+      do_collection(false,                     // full
+                    false,                     // clear_all_soft_refs
+                    size,                      // size
+                    is_tlab,                   // is_tlab
+                    GenCollectedHeap::YoungGen); // max_generation
+    } else {
+      do_collection(false,                     // full
+                    false,                     // clear_all_soft_refs
+                    size,                      // size
+                    is_tlab,                   // is_tlab
+                    GenCollectedHeap::OldGen); // max_generation
+    }
   } else {
     log_trace(gc)(" :: Trying full because partial may fail :: ");
     // Try a full collection; see delta for bug id 6266275
     // for the original code and why this has been simplified
     // with from-space allocation criteria modified and
     // such allocation moved out of the safepoint path.
-    do_collection(true,                      // full
-                  false,                     // clear_all_soft_refs
-                  size,                      // size
-                  is_tlab,                   // is_tlab
-                  GenCollectedHeap::OldGen); // max_generation
+    if (UseFullParNewGC) {
+      do_collection(true,                      // full
+                    false,                     // clear_all_soft_refs
+                    size,                      // size
+                    is_tlab,                   // is_tlab
+                    GenCollectedHeap::YoungGen); // max_generation
+    } else {
+      do_collection(true,                      // full
+                    false,                     // clear_all_soft_refs
+                    size,                      // size
+                    is_tlab,                   // is_tlab
+                    GenCollectedHeap::OldGen); // max_generation
+    }
   }
 
   result = attempt_allocation(size, is_tlab, false /*first_only*/);
@@ -741,7 +760,13 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
   // a complete compaction of the heap. Any additional methods for finding
   // free memory should be here, especially if they are expensive. If this
   // attempt fails, an OOM exception will be thrown.
-  {
+  if (UseFullParNewGC) {
+    do_collection(true,                      // full
+                  true,                      // clear_all_soft_refs
+                  size,                      // size
+                  is_tlab,                   // is_tlab
+                  GenCollectedHeap::YoungGen); // max_generation
+  } else {
     UIntFlagSetting flag_change(MarkSweepAlwaysCompactCount, 1); // Make sure the heap is fully compacted
 
     do_collection(true,                      // full
