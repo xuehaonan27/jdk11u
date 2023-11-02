@@ -36,8 +36,6 @@
 #include "oops/access.inline.hpp"
 #include "oops/oop.inline.hpp"
 
-#include "utilities/exceptions.hpp"
-
 inline PSPromotionManager* PSPromotionManager::manager_array(uint index) {
   assert(_manager_array != NULL, "access of NULL manager_array");
   assert(index <= ParallelGCThreads, "out of range manager_array access");
@@ -161,17 +159,8 @@ inline oop PSPromotionManager::copy_to_survivor_space(oop o) {
     if (new_obj == NULL) {
       // throw oom error
       if (UseParallelFullScavengeGC) {
-        Thread* THREAD = Thread::current();
-        // -XX:+HeapDumpOnOutOfMemoryError and -XX:OnOutOfMemoryError support
-        report_java_out_of_memory("GC overhead limit exceeded (psnew promotion failed)");
-
-        if (JvmtiExport::should_post_resource_exhausted()) {
-          JvmtiExport::post_resource_exhausted(
-            JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR | JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP,
-            "GC overhead limit exceeded (psnew promotion failed)");
-        }
-
-        THROW_OOP_(Universe::out_of_memory_error_gc_overhead_limit(), NULL);
+        _old_gen_is_full = true;
+        return oop_promotion_failed(o, test_mark);
       }
 
 #ifndef PRODUCT
