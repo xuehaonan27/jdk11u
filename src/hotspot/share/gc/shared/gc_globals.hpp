@@ -195,6 +195,10 @@
   product(bool, UseParallelGC, false,                                       \
           "Use the Parallel Scavenge garbage collector")                    \
                                                                             \
+  product(bool, UseParallelFullMarkCompactGC, false,                        \
+          "Use the Parallel full heap mark compact garbage collector. "     \
+          "It will disable young gen of PS gc, works with UseParallelGC.")  \
+                                                                            \
   product(bool, UseParallelOldGC, false,                                    \
           "Use the Parallel Old garbage collector")                         \
                                                                             \

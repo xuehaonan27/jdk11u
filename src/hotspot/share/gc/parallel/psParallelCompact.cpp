@@ -1703,7 +1703,7 @@ void PSParallelCompact::invoke(bool maximum_heap_compaction) {
   PSAdaptiveSizePolicy* policy = heap->size_policy();
   IsGCActiveMark mark;
 
-  if (ScavengeBeforeFullGC) {
+  if (ScavengeBeforeFullGC && !UseParallelFullMarkCompactGC) {
     PSScavenge::invoke_no_policy();
   }
 
@@ -1716,13 +1716,15 @@ void PSParallelCompact::invoke(bool maximum_heap_compaction) {
 
 // This method contains no policy. You should probably
 // be calling invoke() instead.
-bool PSParallelCompact::invoke_no_policy(bool maximum_heap_compaction) {
+bool PSParallelCompact::invoke_no_policy(bool maximum_heap_compaction_arg) {
   assert(SafepointSynchronize::is_at_safepoint(), "must be at a safepoint");
   assert(ref_processor() != NULL, "Sanity");
 
   if (GCLocker::check_active_before_gc()) {
     return false;
   }
+
+  bool maximum_heap_compaction = UseParallelFullMarkCompactGC || maximum_heap_compaction_arg;
 
   ParallelScavengeHeap* heap = ParallelScavengeHeap::heap();
 
@@ -1892,6 +1894,10 @@ bool PSParallelCompact::invoke_no_policy(bool maximum_heap_compaction) {
     }
 
     heap->resize_all_tlabs();
+
+    if (UseParallelFullMarkCompactGC) {
+      old_gen->record_used_at_full_gc();
+    }
 
     // Resize the metaspace capacity after a collection
     MetaspaceGC::compute_new_size();
