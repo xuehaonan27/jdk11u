@@ -59,6 +59,10 @@ class PSOldGen : public CHeapObj<mtGC> {
   const size_t _min_gen_size;
   const size_t _max_gen_size;
 
+  // Record old gen usage at the end of full gc.
+  // Used to get the size of space that used by new allocated objects in old gen between full gcs.
+  size_t _used_in_bytes_last_full_gc;
+
   // Used when initializing the _name field.
   static inline const char* select_name();
 
@@ -176,6 +180,9 @@ class PSOldGen : public CHeapObj<mtGC> {
   size_t capacity_in_words() const        { return object_space()->capacity_in_words(); }
   size_t used_in_words() const            { return object_space()->used_in_words(); }
   size_t free_in_words() const            { return object_space()->free_in_words(); }
+
+  void record_used_at_full_gc();
+  size_t used_in_bytes_since_last_full_gc() const { return object_space()->used_in_bytes() - _used_in_bytes_last_full_gc; }
 
   // Includes uncommitted memory
   size_t contiguous_available() const;

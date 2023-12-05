@@ -204,8 +204,12 @@ class ParallelScavengeHeap : public CollectedHeap {
 
   bool supports_inline_contig_alloc() const { return !UseNUMA; }
 
-  HeapWord* volatile* top_addr() const { return !UseNUMA ? young_gen()->top_addr() : (HeapWord* volatile*)-1; }
-  HeapWord** end_addr() const { return !UseNUMA ? young_gen()->end_addr() : (HeapWord**)-1; }
+  HeapWord* volatile* top_addr() const { return UseNUMA ? (HeapWord* volatile*)-1
+                                                        : !UseParallelFullMarkCompactGC ? young_gen()->top_addr()
+                                                                                        : old_gen()->object_space()->top_addr(); }
+  HeapWord** end_addr() const { return UseNUMA ? (HeapWord**)-1
+                                               : !UseParallelFullMarkCompactGC ? young_gen()->end_addr()
+                                                                               : old_gen()->object_space()->end_addr(); }
 
   void ensure_parsability(bool retire_tlabs);
   void accumulate_statistics_all_tlabs();
