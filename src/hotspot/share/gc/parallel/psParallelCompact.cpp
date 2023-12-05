@@ -1619,10 +1619,12 @@ void PSParallelCompact::summary_phase(ParCompactionManager* cm,
   // Old generations.
   summarize_space(old_space_id, maximum_compaction);
 
-  // Summarize the remaining spaces in the young gen.  The initial target space
-  // is the old gen.  If a space does not fit entirely into the target, then the
-  // remainder is compacted into the space itself and that space becomes the new
-  // target.
+  // Summarize the remaining spaces in the young gen.
+  // For parallel full scavenge gc which does not using old gen, all the spaces in
+  // young gen is compacted into the space itself.
+  // Otherwise, the initial target space is the old gen.  If a space does not fit
+  // entirely into the target, then the remainder is compacted into the space itself
+  // and that space becomes the new target.
   SpaceId dst_space_id = old_space_id;
   HeapWord* dst_space_end = old_space->end();
   HeapWord** new_top_addr = _space_info[dst_space_id].new_top_addr();
@@ -1632,9 +1634,12 @@ void PSParallelCompact::summary_phase(ParCompactionManager* cm,
                                       space->bottom());
     const size_t available = pointer_delta(dst_space_end, *new_top_addr);
 
-    NOT_PRODUCT(summary_phase_msg(dst_space_id, *new_top_addr, dst_space_end,
-                                  SpaceId(id), space->bottom(), space->top());)
-    if (live > 0 && live <= available) {
+    NOT_PRODUCT(if (!UseParallelFullScavengeGC) {
+                  summary_phase_msg(dst_space_id, *new_top_addr, dst_space_end,
+                                    SpaceId(id), space->bottom(), space->top());
+                }
+    )
+    if (!UseParallelFullScavengeGC && live > 0 && live <= available) {
       // All the live data will fit.
       bool done = _summary_data.summarize(_space_info[id].split_info(),
                                           space->bottom(), space->top(),
@@ -1645,7 +1650,7 @@ void PSParallelCompact::summary_phase(ParCompactionManager* cm,
 
       // Reset the new_top value for the space.
       _space_info[id].set_new_top(space->bottom());
-    } else if (live > 0) {
+    } else if (!UseParallelFullScavengeGC && live > 0) {
       // Attempt to fit part of the source space into the target space.
       HeapWord* next_src_addr = NULL;
       bool done = _summary_data.summarize(_space_info[id].split_info(),
@@ -1669,6 +1674,22 @@ void PSParallelCompact::summary_phase(ParCompactionManager* cm,
                                      NULL,
                                      space->bottom(), dst_space_end,
                                      new_top_addr);
+      assert(done, "space must fit when compacted into itself");
+      assert(*new_top_addr <= space->top(), "usage should not grow");
+    } else if (UseParallelFullScavengeGC && live > 0) {
+      // For parallel full scavenge gc which does not using old gen, all the spaces in
+      // young gen is compacted into the space itself.
+      dst_space_id = SpaceId(id);
+      dst_space_end = space->end();
+      new_top_addr = _space_info[id].new_top_addr();
+      NOT_PRODUCT(summary_phase_msg(dst_space_id,
+                                    space->bottom(), dst_space_end,
+                                    SpaceId(id), space->bottom(), space->top());)
+      bool done = _summary_data.summarize(_space_info[id].split_info(),
+                                          space->bottom(), space->top(),
+                                          NULL,
+                                          space->bottom(), dst_space_end,
+                                          new_top_addr);
       assert(done, "space must fit when compacted into itself");
       assert(*new_top_addr <= space->top(), "usage should not grow");
     }
@@ -1703,7 +1724,7 @@ void PSParallelCompact::invoke(bool maximum_heap_compaction) {
   PSAdaptiveSizePolicy* policy = heap->size_policy();
   IsGCActiveMark mark;
 
-  if (ScavengeBeforeFullGC && !UseParallelFullMarkCompactGC) {
+  if (ScavengeBeforeFullGC && !(UseParallelFullScavengeGC || UseParallelFullMarkCompactGC)) {
     PSScavenge::invoke_no_policy();
   }
 

@@ -50,7 +50,9 @@ void VM_ParallelGCFailedAllocation::doit() {
 }
 
 static bool is_cause_full(GCCause::Cause cause) {
-  if (UseParallelFullMarkCompactGC) {
+  if (UseParallelFullScavengeGC) {
+    return false;
+  } else if (UseParallelFullMarkCompactGC) {
     return true;
   } else {
     return (cause != GCCause::_gc_locker) && (cause != GCCause::_wb_young_gc)

@@ -17,3 +17,7 @@ the OpenJDK Community and the JDK.
 ```
 Parallel GC now use single thread to process `java.lang.ref.Reference` instances during full gc by default.  
 For cache app, for example, QuickCached, that uses soft references, it will improve this phase significantly if parallel reference processing is enabled by specifying `-XX:+ParallelRefProcEnabled`. The ergonomics of `java.lang.ref.Reference` processing can be tuned by using the experimental option `-XX:ReferencesPerThread` (default value: 1000), and it starts one thread for this amount of references.
+### Full heap parallel scavenge collector
+```bash
+-Xms32g -Xmx32g -XX:+UseParallelGC -XX:+UseParallelFullScavengeGC -XX:NewSize=32g -XX:MaxNewSize=32g -XX:SurvivorRatio=1 -XX:-UseAdaptiveSizePolicy
+```

@@ -274,7 +274,7 @@ HeapWord* ParallelScavengeHeap::mem_allocate(
       }
 
       // If certain conditions hold, try allocating from the old gen.
-      result = !UseParallelFullMarkCompactGC ? mem_allocate_old_gen(size) : NULL;
+      result = !(UseParallelFullMarkCompactGC || UseParallelFullScavengeGC) ? mem_allocate_old_gen(size) : NULL;
       if (result != NULL) {
         return result;
       }
@@ -425,11 +425,8 @@ HeapWord* ParallelScavengeHeap::failed_mem_allocate(size_t size) {
   assert(Thread::current() == (Thread*)VMThread::vm_thread(), "should be in vm thread");
   assert(!is_gc_active(), "not reentrant");
   assert(!Heap_lock->owned_by_self(), "this thread should not own the Heap_lock");
-
   HeapWord* result = NULL;
-  // We assume that allocation in eden will fail unless we collect.
 
-  // First level allocation failure, scavenge and allocate in young gen.
   GCCauseSetter gccs(this, GCCause::_allocation_failure);
 
   if (UseParallelFullMarkCompactGC) {
@@ -449,6 +446,26 @@ HeapWord* ParallelScavengeHeap::failed_mem_allocate(size_t size) {
     //   After more complete mark compact, allocate in old generation.
     if (result == NULL) {
       result = old_gen()->allocate(size);
+    }
+  } else if (UseParallelFullScavengeGC) {
+    // Policy of full heap scavenge gc:
+    // We assume that allocation in eden will fail unless we collect.
+    // First level allocation failure, scavenge and allocate in young gen.
+    PSScavenge::invoke();
+    result = young_gen()->allocate(size);
+
+    // Second level allocation failure.
+    //   Scavenge and allocate in young generation.
+    if (result == NULL) {
+      PSScavenge::invoke();
+      result = young_gen()->allocate(size);
+    }
+
+    // Third level allocation failure.
+    //   After scavenge and young generation allocation failure,
+    //   allocate in young generation.
+    if (result == NULL) {
+      result = young_gen()->allocate(size);
     }
   } else {
     // Policy of PS gc:
