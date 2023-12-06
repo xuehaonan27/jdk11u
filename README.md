@@ -15,3 +15,5 @@ the OpenJDK Community and the JDK.
 ```bash
 -Xms32g -Xmx32g -XX:+UseParallelGC -XX:+UseParallelFullMarkCompactGC -XX:NewSize=1k -XX:MaxNewSize=1k -XX:-UseAdaptiveSizePolicy
 ```
+Parallel GC now use single thread to process `java.lang.ref.Reference` instances during full gc by default.  
+For cache app, for example, QuickCached, that uses soft references, it will improve this phase significantly if parallel reference processing is enabled by specifying `-XX:+ParallelRefProcEnabled`. The ergonomics of `java.lang.ref.Reference` processing can be tuned by using the experimental option `-XX:ReferencesPerThread` (default value: 1000), and it starts one thread for this amount of references.
