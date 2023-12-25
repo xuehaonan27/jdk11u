@@ -1760,9 +1760,37 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
   // The foreground collector cannot wait on a phase that is done
   // while the world is stopped because the foreground collector already
   // has the world stopped and would deadlock.
+
+  ReleaseForegroundGC x(this);
+  VM_CMS_BackgroundStopWorld stop_the_world_op(this);
+  VMThread::execute(&stop_the_world_op);
+
+
+  // Should this be in gc_epilogue?
+  heap->counters()->update_counters();
+
+  {
+    // Clear _foregroundGCShouldWait and, in the event that the
+    // foreground collector is waiting, notify it, before
+    // returning.
+    MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
+    _foregroundGCShouldWait = false;
+    if (_foregroundGCIsActive) {
+      CGC_lock->notify();
+    }
+    assert(!ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+           "Possible deadlock");
+  }
+  log_debug(gc, state)("CMS Thread " INTPTR_FORMAT " exiting collection CMS state %d",
+                       p2i(Thread::current()), _collectorState);
+  log_info(gc, heap)("Old: " SIZE_FORMAT "K->" SIZE_FORMAT "K("  SIZE_FORMAT "K)",
+                     prev_used / K, _cmsGen->used()/K, _cmsGen->capacity() /K);
+}
+
+void CMSCollector::collect_in_background_loop_body(){
   while (_collectorState != Idling) {
     log_debug(gc, state)("Thread " INTPTR_FORMAT " in CMS state %d",
-                         p2i(Thread::current()), _collectorState);
+            p2i(Thread::current()), _collectorState);
     // The foreground collector
     //   holds the Heap_lock throughout its collection.
     //   holds the CMS token (but not the lock)
@@ -1784,40 +1812,44 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
     //                  safepoint_synchronize() -->
     //                    CMSThread::synchronize())
 
-    {
-      // Check if the FG collector wants us to yield.
-      CMSTokenSync x(true); // is cms thread
-      if (waitForForegroundGC()) {
-        // We yielded to a foreground GC, nothing more to be
-        // done this round.
-        assert(_foregroundGCShouldWait == false, "We set it to false in "
-               "waitForForegroundGC()");
-        log_debug(gc, state)("CMS Thread " INTPTR_FORMAT " exiting collection CMS state %d",
-                             p2i(Thread::current()), _collectorState);
-        return;
-      } else {
-        // The background collector can run but check to see if the
-        // foreground collector has done a collection while the
-        // background collector was waiting to get the CGC_lock
-        // above.  If yes, break so that _foregroundGCShouldWait
-        // is cleared before returning.
-        if (_collectorState == Idling) {
-          break;
-        }
-      }
+//    {
+//      // Check if the FG collector wants us to yield.
+//      CMSTokenSync x(true); // is cms thread
+//      if (waitForForegroundGC()) {
+//        // We yielded to a foreground GC, nothing more to be
+//        // done this round.
+//        assert(_foregroundGCShouldWait == false, "We set it to false in "
+//               "waitForForegroundGC()");
+//        log_debug(gc, state)("CMS Thread " INTPTR_FORMAT " exiting collection CMS state %d",
+//                             p2i(Thread::current()), _collectorState);
+//        return;
+//      } else {
+//        // The background collector can run but check to see if the
+//        // foreground collector has done a collection while the
+//        // background collector was waiting to get the CGC_lock
+//        // above.  If yes, break so that _foregroundGCShouldWait
+//        // is cleared before returning.
+//        if (_collectorState == Idling) {
+//          break;
+//        }
+//      }
+//    }
+
+    if (_collectorState == Idling) {
+      break;
     }
 
     assert(_foregroundGCShouldWait, "Foreground collector, if active, "
-      "should be waiting");
+                                    "should be waiting");
 
     switch (_collectorState) {
       case InitialMarking:
-        {
-          ReleaseForegroundGC x(this);
-          stats().record_cms_begin();
-          VM_CMS_Initial_Mark initial_mark_op(this);
-          VMThread::execute(&initial_mark_op);
-        }
+      {
+        ReleaseForegroundGC x(this);
+        stats().record_cms_begin();
+        VM_CMS_Initial_Mark initial_mark_op(this);
+        VMThread::execute(&initial_mark_op);
+      }
         // The collector state may be any legal state at this point
         // since the background collector may have yielded to the
         // foreground collector.
@@ -1826,7 +1858,7 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
         // initial marking in checkpointRootsInitialWork has been completed
         if (markFromRoots()) { // we were successful
           assert(_collectorState == Precleaning, "Collector state should "
-            "have changed");
+                                                 "have changed");
         } else {
           assert(_foregroundGCIsActive, "Internal state inconsistency");
         }
@@ -1841,22 +1873,22 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
       case AbortablePreclean:
         abortable_preclean();
         assert(_collectorState == FinalMarking, "Collector state should "
-          "have changed");
+                                                "have changed");
         break;
       case FinalMarking:
-        {
-          ReleaseForegroundGC x(this);
+      {
+        ReleaseForegroundGC x(this);
 
-          VM_CMS_Final_Remark final_remark_op(this);
-          VMThread::execute(&final_remark_op);
-        }
+        VM_CMS_Final_Remark final_remark_op(this);
+        VMThread::execute(&final_remark_op);
+      }
         assert(_foregroundGCShouldWait, "block post-condition");
         break;
       case Sweeping:
         // final marking in checkpointRootsFinal has been completed
         sweep();
         assert(_collectorState == Resizing, "Collector state change "
-          "to Resizing must be done under the free_list_lock");
+                                            "to Resizing must be done under the free_list_lock");
 
       case Resizing: {
         // Sweeping has been completed...
@@ -1874,7 +1906,7 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
             _collectorState = Resetting;
           } else {
             assert(_collectorState == Idling, "The state should only change"
-                   " because the foreground collector has finished the collection");
+                                              " because the foreground collector has finished the collection");
           }
         }
         break;
@@ -1883,7 +1915,7 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
         // CMS heap resizing has been completed
         reset_concurrent();
         assert(_collectorState == Idling, "Collector state should "
-          "have changed");
+                                          "have changed");
 
         MetaspaceGC::set_should_concurrent_collect(false);
 
@@ -1898,29 +1930,9 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
         break;
     }
     log_debug(gc, state)("  Thread " INTPTR_FORMAT " done - next CMS state %d",
-                         p2i(Thread::current()), _collectorState);
+            p2i(Thread::current()), _collectorState);
     assert(_foregroundGCShouldWait, "block post-condition");
   }
-
-  // Should this be in gc_epilogue?
-  heap->counters()->update_counters();
-
-  {
-    // Clear _foregroundGCShouldWait and, in the event that the
-    // foreground collector is waiting, notify it, before
-    // returning.
-    MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
-    _foregroundGCShouldWait = false;
-    if (_foregroundGCIsActive) {
-      CGC_lock->notify();
-    }
-    assert(!ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-           "Possible deadlock");
-  }
-  log_debug(gc, state)("CMS Thread " INTPTR_FORMAT " exiting collection CMS state %d",
-                       p2i(Thread::current()), _collectorState);
-  log_info(gc, heap)("Old: " SIZE_FORMAT "K->" SIZE_FORMAT "K("  SIZE_FORMAT "K)",
-                     prev_used / K, _cmsGen->used()/K, _cmsGen->capacity() /K);
 }
 
 void CMSCollector::register_gc_start(GCCause::Cause cause) {

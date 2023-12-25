@@ -73,6 +73,7 @@
   template(CGC_Operation)                         \
   template(CMS_Initial_Mark)                      \
   template(CMS_Final_Remark)                      \
+  template(CMS_BackgroundStopWorld)               \
   template(G1CollectForAllocation)                \
   template(G1CollectFull)                         \
   template(ZOperation)                            \

@@ -80,7 +80,7 @@ class VM_CMS_Operation: public VM_Operation {
 
   virtual bool evaluate_at_safepoint() const { return true; }
   virtual bool is_cheap_allocated() const { return false; }
-  virtual bool allow_nested_vm_operations() const  { return false; }
+  virtual bool allow_nested_vm_operations() const  { return true; }
   bool prologue_succeeded() const { return _prologue_succeeded; }
 
   void verify_before_gc();
@@ -121,6 +121,27 @@ class VM_CMS_Final_Remark: public VM_CMS_Operation {
   virtual const bool needs_pending_list_lock() const {
     return true;
   }
+};
+
+// VM operation to invoke a collection of the heap as a
+// GenCollectedHeap heap.
+class VM_CMS_BackgroundStopWorld: public VM_CMS_Operation {
+private:
+    GenCollectedHeap::GenerationType _max_generation;
+public:
+    VM_CMS_BackgroundStopWorld(CMSCollector* _collector) :
+            VM_CMS_Operation(_collector) {}
+    ~VM_CMS_BackgroundStopWorld() {}
+    virtual VMOp_Type type() const { return VMOp_CMS_BackgroundStopWorld; }
+    virtual void doit();
+
+    virtual const CMSCollector::CollectorState legal_state() const {
+      return CMSCollector::InitialMarking;
+    }
+
+    virtual const bool needs_pending_list_lock() const {
+      return false;
+    }
 };
 
 

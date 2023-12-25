@@ -104,6 +104,17 @@ void VM_CMS_Operation::doit_epilogue() {
 //////////////////////////////////////////////////////////
 // Methods in class VM_CMS_Initial_Mark
 //////////////////////////////////////////////////////////
+void VM_CMS_BackgroundStopWorld::doit() {
+  if (lost_race()) {
+    // Nothing to do.
+    return;
+  }
+  _collector->collect_in_background_loop_body();
+}
+
+//////////////////////////////////////////////////////////
+// Methods in class VM_CMS_Initial_Mark
+//////////////////////////////////////////////////////////
 void VM_CMS_Initial_Mark::doit() {
   if (lost_race()) {
     // Nothing to do.

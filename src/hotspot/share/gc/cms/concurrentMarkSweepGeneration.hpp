@@ -863,6 +863,7 @@ class CMSCollector: public CHeapObj<mtGC> {
                size_t size,
                bool   tlab);
   void collect_in_background(GCCause::Cause cause);
+  void collect_in_background_loop_body();
 
   // In support of ExplicitGCInvokesConcurrent
   static void request_full_gc(unsigned int full_gc_count, GCCause::Cause cause);
