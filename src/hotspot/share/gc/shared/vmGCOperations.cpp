@@ -179,14 +179,6 @@ void VM_GenCollectFull::doit() {
   gch->do_full_collection(gch->must_clear_all_soft_refs(), _max_generation);
 }
 
-void VM_GenCollectFull::doit() {
-  SvcGCMarker sgcm(SvcGCMarker::FULL);
-
-  GenCollectedHeap* gch = GenCollectedHeap::heap();
-  GCCauseSetter gccs(gch, _gc_cause);
-  gch->do_full_collection(gch->must_clear_all_soft_refs(), _max_generation);
-}
-
 
 VM_CollectForMetadataAllocation::VM_CollectForMetadataAllocation(ClassLoaderData* loader_data,
                                                                  size_t size,

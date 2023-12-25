@@ -1845,7 +1845,7 @@ void CMSCollector::collect_in_background_loop_body(){
     switch (_collectorState) {
       case InitialMarking:
       {
-        ReleaseForegroundGC x(this);
+        // ReleaseForegroundGC x(this);
         stats().record_cms_begin();
         VM_CMS_Initial_Mark initial_mark_op(this);
         VMThread::execute(&initial_mark_op);
@@ -1877,7 +1877,7 @@ void CMSCollector::collect_in_background_loop_body(){
         break;
       case FinalMarking:
       {
-        ReleaseForegroundGC x(this);
+        // ReleaseForegroundGC x(this);
 
         VM_CMS_Final_Remark final_remark_op(this);
         VMThread::execute(&final_remark_op);
@@ -1897,9 +1897,9 @@ void CMSCollector::collect_in_background_loop_body(){
         // into code that might be executed if the background
         // collection was preempted.
         {
-          ReleaseForegroundGC x(this);   // unblock FG collection
+          // ReleaseForegroundGC x(this);   // unblock FG collection
           MutexLockerEx       y(Heap_lock, Mutex::_no_safepoint_check_flag);
-          CMSTokenSync        z(true);   // not strictly needed.
+          // CMSTokenSync        z(true);   // not strictly needed.
           if (_collectorState == Resizing) {
             compute_new_size();
             save_heap_summary();
