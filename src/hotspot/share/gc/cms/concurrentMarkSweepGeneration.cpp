@@ -121,7 +121,7 @@ GCCause::Cause CMSCollector::_full_gc_cause = GCCause::_no_gc;
 //
 // Two important conditions that we have to satisfy:
 // 1. if a thread does a low-level wait on the CMS lock, then it
-//    relinquishes the CMS token if it were holding that token
+//    relinquishes (abandon) the CMS token if it were holding that token
 //    when it acquired the low-level CMS lock.
 // 2. any low-level notifications on the low-level lock
 //    should only be sent when a thread has relinquished the token.
@@ -1195,7 +1195,7 @@ bool CMSCollector::shouldConcurrentCollect() {
   // this is not likely to be productive in practice because it's probably too
   // late anyway.
   CMSHeap* heap = CMSHeap::heap();
-  if (heap->incremental_collection_will_fail(true /* consult_young */)) {
+  if (heap->incremental_collection_will_fail(true /* consult_young */)) { //hua: always return false for CMS?
     log.print("CMSCollector: collect because incremental collection will fail ");
     return true;
   }
@@ -4281,7 +4281,7 @@ void CMSParInitialMarkTask::work(uint worker_id) {
   _timer.reset();
   _timer.start();
 
-  CLDToOopClosure cld_closure(&par_mri_cl, true);
+  CLDToOopClosure cld_closure(&par_mri_cl, true); //hua: treat cld as oop (therefore can use par_mri_cl.do_oop)
 
   heap->cms_process_roots(_strong_roots_scope,
                           false,     // yg was scanned above
