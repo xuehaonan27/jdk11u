@@ -153,7 +153,7 @@ class CMSTokenSync: public StackObj {
   bool _is_cms_thread;
  public:
   CMSTokenSync(bool is_cms_thread):
-//    _is_cms_thread(is_cms_thread) {
+   _is_cms_thread(is_cms_thread) {
 //    assert(is_cms_thread == Thread::current()->is_ConcurrentGC_thread(),
 //           "Incorrect argument to constructor");
 //    ConcurrentMarkSweepThread::synchronize(_is_cms_thread);

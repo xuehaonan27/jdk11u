@@ -50,7 +50,7 @@ class ConcurrentMarkSweepThread: public ConcurrentGCThread {
     CMS_vm_has_token    = nth_bit(3)
   };
 
-//  static int _CMS_flag;
+ static int _CMS_flag;
 
 //  static bool CMS_flag_is_set(int b)        { return (_CMS_flag & b) != 0;   }
 //  static bool set_CMS_flag(int b)           { return (_CMS_flag |= b) != 0;  }
