@@ -153,18 +153,18 @@ class CMSTokenSync: public StackObj {
   bool _is_cms_thread;
  public:
   CMSTokenSync(bool is_cms_thread):
-    _is_cms_thread(is_cms_thread) {
-    assert(is_cms_thread == Thread::current()->is_ConcurrentGC_thread(),
-           "Incorrect argument to constructor");
-    ConcurrentMarkSweepThread::synchronize(_is_cms_thread);
+//    _is_cms_thread(is_cms_thread) {
+//    assert(is_cms_thread == Thread::current()->is_ConcurrentGC_thread(),
+//           "Incorrect argument to constructor");
+//    ConcurrentMarkSweepThread::synchronize(_is_cms_thread);
   }
 
   ~CMSTokenSync() {
-    assert(_is_cms_thread ?
-             ConcurrentMarkSweepThread::cms_thread_has_cms_token() :
-             ConcurrentMarkSweepThread::vm_thread_has_cms_token(),
-          "Incorrect state");
-    ConcurrentMarkSweepThread::desynchronize(_is_cms_thread);
+//    assert(_is_cms_thread ?
+//             ConcurrentMarkSweepThread::cms_thread_has_cms_token() :
+//             ConcurrentMarkSweepThread::vm_thread_has_cms_token(),
+//          "Incorrect state");
+//    ConcurrentMarkSweepThread::desynchronize(_is_cms_thread);
   }
 };
 
@@ -1411,8 +1411,8 @@ void CMSCollector::acquire_control_and_collect(bool full,
 
   // Start the protocol for acquiring control of the
   // collection from the background collector (aka CMS thread).
-  assert(ConcurrentMarkSweepThread::vm_thread_has_cms_token(),
-         "VM thread should have CMS token");
+//  assert(ConcurrentMarkSweepThread::vm_thread_has_cms_token(),
+//         "VM thread should have CMS token");
   // Remember the possibly interrupted state of an ongoing
   // concurrent collection
   CollectorState first_state = _collectorState;
@@ -1459,8 +1459,8 @@ void CMSCollector::acquire_control_and_collect(bool full,
   //   }
   // }
   // The CMS_token is already held.  Get back the other locks.
-  assert(ConcurrentMarkSweepThread::vm_thread_has_cms_token(),
-         "VM thread should have CMS token");
+//  assert(ConcurrentMarkSweepThread::vm_thread_has_cms_token(),
+//         "VM thread should have CMS token");
   getFreelistLocks();
   bitMapLock()->lock_without_safepoint_check();
   log_debug(gc, state)("CMS foreground collector has asked for control " INTPTR_FORMAT " with first state %d",
@@ -2187,18 +2187,18 @@ void ConcurrentMarkSweepGeneration::gc_epilogue_work(bool full) {
 }
 
 #ifndef PRODUCT
-bool CMSCollector::have_cms_token() {
-  Thread* thr = Thread::current();
-  if (thr->is_VM_thread()) {
-    return ConcurrentMarkSweepThread::vm_thread_has_cms_token();
-  } else if (thr->is_ConcurrentGC_thread()) {
-    return ConcurrentMarkSweepThread::cms_thread_has_cms_token();
-  } else if (thr->is_GC_task_thread()) {
-    return ConcurrentMarkSweepThread::vm_thread_has_cms_token() &&
-           ParGCRareEvent_lock->owned_by_self();
-  }
-  return false;
-}
+//bool CMSCollector::have_cms_token() {
+//  Thread* thr = Thread::current();
+//  if (thr->is_VM_thread()) {
+//    return ConcurrentMarkSweepThread::vm_thread_has_cms_token();
+//  } else if (thr->is_ConcurrentGC_thread()) {
+//    return ConcurrentMarkSweepThread::cms_thread_has_cms_token();
+//  } else if (thr->is_GC_task_thread()) {
+//    return ConcurrentMarkSweepThread::vm_thread_has_cms_token() &&
+//           ParGCRareEvent_lock->owned_by_self();
+//  }
+//  return false;
+//}
 
 // Check reachability of the given heap address in CMS generation,
 // treating all other generations as roots.
@@ -2212,7 +2212,7 @@ bool CMSCollector::is_cms_reachable(HeapWord* addr) {
   // being read or written.
   assert(SafepointSynchronize::is_at_safepoint(),
          "Else mutations in object graph will make answer suspect");
-  assert(have_cms_token(), "Should hold cms token");
+//  assert(have_cms_token(), "Should hold cms token");
   assert(haveFreelistLocks(), "must hold free list locks");
   assert_lock_strong(bitMapLock());
 
@@ -2287,9 +2287,9 @@ bool CMSCollector::verify_after_remark() {
 
   assert(SafepointSynchronize::is_at_safepoint(),
          "Else mutations in object graph will make answer suspect");
-  assert(have_cms_token(),
-         "Else there may be mutual interference in use of "
-         " verification data structures");
+//  assert(have_cms_token(),
+//         "Else there may be mutual interference in use of "
+//         " verification data structures");
   assert(_collectorState > Marking && _collectorState <= Sweeping,
          "Else marking info checked here may be obsolete");
   assert(haveFreelistLocks(), "must hold free list locks");
@@ -3456,8 +3456,8 @@ void CMSConcMarkingTask::do_work_steal(int i) {
 
 // This is run by the CMS (coordinator) thread.
 void CMSConcMarkingTask::coordinator_yield() {
-  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-         "CMS thread should hold CMS token");
+//  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//         "CMS thread should hold CMS token");
   // First give up the locks, then yield, then re-lock
   // We should probably use a constructor/destructor idiom to
   // do this unlock/lock or modify the MutexUnlocker class to
@@ -3715,8 +3715,8 @@ void CMSCollector::sample_eden() {
   // reading and recording of a sample.
   assert(Thread::current()->is_ConcurrentGC_thread(),
          "Only the cms thread may collect Eden samples");
-  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-         "Should collect samples while holding CMS token");
+//  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//         "Should collect samples while holding CMS token");
   if (!_start_sampling) {
     return;
   }
@@ -5442,8 +5442,8 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
   // as well take the bit map lock for the entire duration
 
   // check that we hold the requisite locks
-  assert(have_cms_token(), "Should hold cms token");
-  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(), "Should possess CMS token to sweep");
+//  assert(have_cms_token(), "Should hold cms token");
+//  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(), "Should possess CMS token to sweep");
   assert_lock_strong(old_gen->freelistLock());
   assert_lock_strong(bitMapLock());
 
@@ -5498,8 +5498,8 @@ void CMSCollector::reset_concurrent() {
       if (ConcurrentMarkSweepThread::should_yield() &&
 //          !foregroundGCIsActive() &&
           CMSYield) {
-        assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-               "CMS thread should hold CMS token");
+//        assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//               "CMS thread should hold CMS token");
         assert_lock_strong(bitMapLock());
         bitMapLock()->unlock();
         ConcurrentMarkSweepThread::desynchronize(true);
@@ -5956,8 +5956,8 @@ void MarkRefsIntoAndScanClosure::do_oop(oop obj) {
 }
 
 void MarkRefsIntoAndScanClosure::do_yield_work() {
-  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-         "CMS thread should hold CMS token");
+//  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//         "CMS thread should hold CMS token");
   assert_lock_strong(_freelistLock);
   assert_lock_strong(_bit_map->lock());
   // relinquish the free_list_lock and bitMaplock()
@@ -6114,8 +6114,8 @@ size_t ScanMarkedObjectsAgainCarefullyClosure::do_object_careful_m(
 }
 
 void ScanMarkedObjectsAgainCarefullyClosure::do_yield_work() {
-  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-         "CMS thread should hold CMS token");
+//  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//         "CMS thread should hold CMS token");
   assert_lock_strong(_freelistLock);
   assert_lock_strong(_bitMap->lock());
   // relinquish the free_list_lock and bitMaplock()
@@ -6184,8 +6184,8 @@ size_t SurvivorSpacePrecleanClosure::do_object_careful(oop p) {
 }
 
 void SurvivorSpacePrecleanClosure::do_yield_work() {
-  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-         "CMS thread should hold CMS token");
+//  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//         "CMS thread should hold CMS token");
   assert_lock_strong(_bit_map->lock());
   // Relinquish the bit map lock
   _bit_map->lock()->unlock();
@@ -6335,8 +6335,8 @@ void MarkFromRootsClosure::do_yield_work() {
   // We should probably use a constructor/destructor idiom to
   // do this unlock/lock or modify the MutexUnlocker class to
   // serve our purpose. XXX
-  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-         "CMS thread should hold CMS token");
+//  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//         "CMS thread should hold CMS token");
   assert_lock_strong(_bitMap->lock());
   _bitMap->lock()->unlock();
   ConcurrentMarkSweepThread::desynchronize(true);
@@ -6947,8 +6947,8 @@ void ParPushAndMarkClosure::do_oop(oop obj) {
 void CMSPrecleanRefsYieldClosure::do_yield_work() {
   Mutex* bml = _collector->bitMapLock();
   assert_lock_strong(bml);
-  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-         "CMS thread should hold CMS token");
+//  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//         "CMS thread should hold CMS token");
 
   bml->unlock();
   ConcurrentMarkSweepThread::desynchronize(true);
@@ -7513,8 +7513,8 @@ void SweepClosure::do_yield_work(HeapWord* addr) {
   // serve our purpose. XXX
   assert_lock_strong(_bitMap->lock());
   assert_lock_strong(_freelistLock);
-  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-         "CMS thread should hold CMS token");
+//  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//         "CMS thread should hold CMS token");
   _bitMap->lock()->unlock();
   _freelistLock->unlock();
   ConcurrentMarkSweepThread::desynchronize(true);

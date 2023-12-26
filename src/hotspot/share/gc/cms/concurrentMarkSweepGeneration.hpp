@@ -854,7 +854,7 @@ class CMSCollector: public CHeapObj<mtGC> {
   ConcurrentMarkSweepGeneration* cmsGen() { return _cmsGen; }
 
   // Locking checks
-  NOT_PRODUCT(static bool have_cms_token();)
+//  NOT_PRODUCT(static bool have_cms_token();)
 
   bool shouldConcurrentCollect();
 

@@ -76,8 +76,8 @@ bool VM_CMS_Operation::lost_race() const {
 bool VM_CMS_Operation::doit_prologue() {
   assert(Thread::current()->is_ConcurrentGC_thread(), "just checking");
   assert(!CMSCollector::foregroundGCShouldWait(), "Possible deadlock");
-  assert(!ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-         "Possible deadlock");
+//  assert(!ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//         "Possible deadlock");
 
   Heap_lock->lock();
   if (lost_race()) {
@@ -92,8 +92,8 @@ bool VM_CMS_Operation::doit_prologue() {
 void VM_CMS_Operation::doit_epilogue() {
   assert(Thread::current()->is_ConcurrentGC_thread(), "just checking");
   assert(!CMSCollector::foregroundGCShouldWait(), "Possible deadlock");
-  assert(!ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-         "Possible deadlock");
+//  assert(!ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//         "Possible deadlock");
 
   if (Universe::has_reference_pending_list()) {
     Heap_lock->notify_all();

@@ -50,11 +50,11 @@ class ConcurrentMarkSweepThread: public ConcurrentGCThread {
     CMS_vm_has_token    = nth_bit(3)
   };
 
-  static int _CMS_flag;
+//  static int _CMS_flag;
 
-  static bool CMS_flag_is_set(int b)        { return (_CMS_flag & b) != 0;   }
-  static bool set_CMS_flag(int b)           { return (_CMS_flag |= b) != 0;  }
-  static bool clear_CMS_flag(int b)         { return (_CMS_flag &= ~b) != 0; }
+//  static bool CMS_flag_is_set(int b)        { return (_CMS_flag & b) != 0;   }
+//  static bool set_CMS_flag(int b)           { return (_CMS_flag |= b) != 0;  }
+//  static bool clear_CMS_flag(int b)         { return (_CMS_flag &= ~b) != 0; }
   void sleepBeforeNextCycle();
 
   // CMS thread should yield for a young gen collection and direct allocations
@@ -88,18 +88,18 @@ class ConcurrentMarkSweepThread: public ConcurrentGCThread {
   // Synchronization using CMS token
   static void synchronize(bool is_cms_thread);
   static void desynchronize(bool is_cms_thread);
-  static bool vm_thread_has_cms_token() {
-    return CMS_flag_is_set(CMS_vm_has_token);
-  }
-  static bool cms_thread_has_cms_token() {
-    return CMS_flag_is_set(CMS_cms_has_token);
-  }
-  static bool vm_thread_wants_cms_token() {
-    return CMS_flag_is_set(CMS_vm_wants_token);
-  }
-  static bool cms_thread_wants_cms_token() {
-    return CMS_flag_is_set(CMS_cms_wants_token);
-  }
+//  static bool vm_thread_has_cms_token() {
+//    return CMS_flag_is_set(CMS_vm_has_token);
+//  }
+//  static bool cms_thread_has_cms_token() {
+//    return CMS_flag_is_set(CMS_cms_has_token);
+//  }
+//  static bool vm_thread_wants_cms_token() {
+//    return CMS_flag_is_set(CMS_vm_wants_token);
+//  }
+//  static bool cms_thread_wants_cms_token() {
+//    return CMS_flag_is_set(CMS_cms_wants_token);
+//  }
 
   // Wait on CMS lock until the next synchronous GC
   // or given timeout, whichever is earlier. A timeout value

@@ -50,11 +50,11 @@ void CMSLockVerifier::assert_locked(const Mutex* lock,
       // multiple peer CMS threads.  But for now, if we're testing the CMS
       assert(myThread == ConcurrentMarkSweepThread::cmst(),
              "In CMS, CMS thread is the only Conc GC thread.");
-      assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-             "CMS thread should have CMS token");
+//      assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//             "CMS thread should have CMS token");
     } else if (myThread->is_VM_thread()) {
-      assert(ConcurrentMarkSweepThread::vm_thread_has_cms_token(),
-             "VM thread should have CMS token");
+//      assert(ConcurrentMarkSweepThread::vm_thread_has_cms_token(),
+//             "VM thread should have CMS token");
     } else {
       // Token should be held on our behalf by one of the other
       // of CMS or VM thread; not enough easily testable

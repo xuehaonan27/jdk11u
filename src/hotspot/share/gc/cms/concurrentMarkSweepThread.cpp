@@ -93,9 +93,9 @@ void ConcurrentMarkSweepThread::run_service() {
 
 #ifndef PRODUCT
 void ConcurrentMarkSweepThread::verify_ok_to_terminate() const {
-  assert(!(CGC_lock->owned_by_self() || cms_thread_has_cms_token() ||
-           cms_thread_wants_cms_token()),
-         "Must renounce all worldly possessions and desires for nirvana");
+//  assert(!(CGC_lock->owned_by_self() || cms_thread_has_cms_token() ||
+//           cms_thread_wants_cms_token()),
+//         "Must renounce all worldly possessions and desires for nirvana");
   _collector->verify_ok_to_terminate();
 }
 #endif
@@ -146,151 +146,155 @@ void ConcurrentMarkSweepThread::print_all_on(outputStream* st) {
 
 void ConcurrentMarkSweepThread::synchronize(bool is_cms_thread) {
   assert(UseConcMarkSweepGC, "just checking");
+  return;
 
-  MutexLockerEx x(CGC_lock,
-                  Mutex::_no_safepoint_check_flag);
-  if (!is_cms_thread) {
-    assert(Thread::current()->is_VM_thread(), "Not a VM thread");
-    CMSSynchronousYieldRequest yr;
-    while (CMS_flag_is_set(CMS_cms_has_token)) {
-      // indicate that we want to get the token
-      set_CMS_flag(CMS_vm_wants_token);
-      CGC_lock->wait(true);
-    }
-    // claim the token and proceed
-    clear_CMS_flag(CMS_vm_wants_token);
-    set_CMS_flag(CMS_vm_has_token);
-  } else {
-    assert(Thread::current()->is_ConcurrentGC_thread(),
-           "Not a CMS thread");
-    // The following barrier assumes there's only one CMS thread.
-    // This will need to be modified is there are more CMS threads than one.
-    while (CMS_flag_is_set(CMS_vm_has_token | CMS_vm_wants_token)) {
-      set_CMS_flag(CMS_cms_wants_token);
-      CGC_lock->wait(true);
-    }
-    // claim the token
-    clear_CMS_flag(CMS_cms_wants_token);
-    set_CMS_flag(CMS_cms_has_token);
-  }
+//  MutexLockerEx x(CGC_lock,
+//                  Mutex::_no_safepoint_check_flag);
+//  if (!is_cms_thread) {
+//    assert(Thread::current()->is_VM_thread(), "Not a VM thread");
+//    CMSSynchronousYieldRequest yr;
+//    while (CMS_flag_is_set(CMS_cms_has_token)) {
+//      // indicate that we want to get the token
+//      set_CMS_flag(CMS_vm_wants_token);
+//      CGC_lock->wait(true);
+//    }
+//    // claim the token and proceed
+//    clear_CMS_flag(CMS_vm_wants_token);
+//    set_CMS_flag(CMS_vm_has_token);
+//  } else {
+//    assert(Thread::current()->is_ConcurrentGC_thread(),
+//           "Not a CMS thread");
+//    // The following barrier assumes there's only one CMS thread.
+//    // This will need to be modified is there are more CMS threads than one.
+//    while (CMS_flag_is_set(CMS_vm_has_token | CMS_vm_wants_token)) {
+//      set_CMS_flag(CMS_cms_wants_token);
+//      CGC_lock->wait(true);
+//    }
+//    // claim the token
+//    clear_CMS_flag(CMS_cms_wants_token);
+//    set_CMS_flag(CMS_cms_has_token);
+//  }
 }
 
 void ConcurrentMarkSweepThread::desynchronize(bool is_cms_thread) {
   assert(UseConcMarkSweepGC, "just checking");
+  return;
 
-  MutexLockerEx x(CGC_lock,
-                  Mutex::_no_safepoint_check_flag);
-  if (!is_cms_thread) {
-    assert(Thread::current()->is_VM_thread(), "Not a VM thread");
-    assert(CMS_flag_is_set(CMS_vm_has_token), "just checking");
-    clear_CMS_flag(CMS_vm_has_token);
-    if (CMS_flag_is_set(CMS_cms_wants_token)) {
-      // wake-up a waiting CMS thread
-      CGC_lock->notify();
-    }
-    assert(!CMS_flag_is_set(CMS_vm_has_token | CMS_vm_wants_token),
-           "Should have been cleared");
-  } else {
-    assert(Thread::current()->is_ConcurrentGC_thread(),
-           "Not a CMS thread");
-    assert(CMS_flag_is_set(CMS_cms_has_token), "just checking");
-    clear_CMS_flag(CMS_cms_has_token);
-    if (CMS_flag_is_set(CMS_vm_wants_token)) {
-      // wake-up a waiting VM thread
-      CGC_lock->notify();
-    }
-    assert(!CMS_flag_is_set(CMS_cms_has_token | CMS_cms_wants_token),
-           "Should have been cleared");
-  }
+//  MutexLockerEx x(CGC_lock,
+//                  Mutex::_no_safepoint_check_flag);
+//  if (!is_cms_thread) {
+//    assert(Thread::current()->is_VM_thread(), "Not a VM thread");
+//    assert(CMS_flag_is_set(CMS_vm_has_token), "just checking");
+//    clear_CMS_flag(CMS_vm_has_token);
+//    if (CMS_flag_is_set(CMS_cms_wants_token)) {
+//      // wake-up a waiting CMS thread
+//      CGC_lock->notify();
+//    }
+//    assert(!CMS_flag_is_set(CMS_vm_has_token | CMS_vm_wants_token),
+//           "Should have been cleared");
+//  } else {
+//    assert(Thread::current()->is_ConcurrentGC_thread(),
+//           "Not a CMS thread");
+//    assert(CMS_flag_is_set(CMS_cms_has_token), "just checking");
+//    clear_CMS_flag(CMS_cms_has_token);
+//    if (CMS_flag_is_set(CMS_vm_wants_token)) {
+//      // wake-up a waiting VM thread
+//      CGC_lock->notify();
+//    }
+//    assert(!CMS_flag_is_set(CMS_cms_has_token | CMS_cms_wants_token),
+//           "Should have been cleared");
+//  }
 }
 
 // Wait until any cms_lock event
 void ConcurrentMarkSweepThread::wait_on_cms_lock(long t_millis) {
-  MutexLockerEx x(CGC_lock,
-                  Mutex::_no_safepoint_check_flag);
-  if (should_terminate() || _collector->_full_gc_requested) {
-    return;
-  }
-  set_CMS_flag(CMS_cms_wants_token);   // to provoke notifies
-  CGC_lock->wait(Mutex::_no_safepoint_check_flag, t_millis);
-  clear_CMS_flag(CMS_cms_wants_token);
-  assert(!CMS_flag_is_set(CMS_cms_has_token | CMS_cms_wants_token),
-         "Should not be set");
+  assert(false, "Should not reach here now as we should disable the background process");
+//  MutexLockerEx x(CGC_lock,
+//                  Mutex::_no_safepoint_check_flag);
+//  if (should_terminate() || _collector->_full_gc_requested) {
+//    return;
+//  }
+//  set_CMS_flag(CMS_cms_wants_token);   // to provoke notifies
+//  CGC_lock->wait(Mutex::_no_safepoint_check_flag, t_millis);
+//  clear_CMS_flag(CMS_cms_wants_token);
+//  assert(!CMS_flag_is_set(CMS_cms_has_token | CMS_cms_wants_token),
+//         "Should not be set");
 }
 
 // Wait until the next synchronous GC, a concurrent full gc request,
 // or a timeout, whichever is earlier.
 void ConcurrentMarkSweepThread::wait_on_cms_lock_for_scavenge(long t_millis) {
+  assert(false, "Should not reach here now as we should disable the background process");
   // Wait time in millis or 0 value representing infinite wait for a scavenge
-  assert(t_millis >= 0, "Wait time for scavenge should be 0 or positive");
-
-  CMSHeap* heap = CMSHeap::heap();
-  double start_time_secs = os::elapsedTime();
-  double end_time_secs = start_time_secs + (t_millis / ((double) MILLIUNITS));
-
-  // Total collections count before waiting loop
-  unsigned int before_count;
-  {
-    MutexLockerEx hl(Heap_lock, Mutex::_no_safepoint_check_flag);
-    before_count = heap->total_collections();
-  }
-
-  unsigned int loop_count = 0;
-
-  while(!should_terminate()) {
-    double now_time = os::elapsedTime();
-    long wait_time_millis;
-
-    if(t_millis != 0) {
-      // New wait limit
-      wait_time_millis = (long) ((end_time_secs - now_time) * MILLIUNITS);
-      if(wait_time_millis <= 0) {
-        // Wait time is over
-        break;
-      }
-    } else {
-      // No wait limit, wait if necessary forever
-      wait_time_millis = 0;
-    }
-
-    // Wait until the next event or the remaining timeout
-    {
-      MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
-
-      if (should_terminate() || _collector->_full_gc_requested) {
-        return;
-      }
-      set_CMS_flag(CMS_cms_wants_token);   // to provoke notifies
-      assert(t_millis == 0 || wait_time_millis > 0, "Sanity");
-      CGC_lock->wait(Mutex::_no_safepoint_check_flag, wait_time_millis);
-      clear_CMS_flag(CMS_cms_wants_token);
-      assert(!CMS_flag_is_set(CMS_cms_has_token | CMS_cms_wants_token),
-             "Should not be set");
-    }
-
-    // Extra wait time check before entering the heap lock to get the collection count
-    if(t_millis != 0 && os::elapsedTime() >= end_time_secs) {
-      // Wait time is over
-      break;
-    }
-
-    // Total collections count after the event
-    unsigned int after_count;
-    {
-      MutexLockerEx hl(Heap_lock, Mutex::_no_safepoint_check_flag);
-      after_count = heap->total_collections();
-    }
-
-    if(before_count != after_count) {
-      // There was a collection - success
-      break;
-    }
-
-    // Too many loops warning
-    if(++loop_count == 0) {
-      log_warning(gc)("wait_on_cms_lock_for_scavenge() has looped %u times", loop_count - 1);
-    }
-  }
+//  assert(t_millis >= 0, "Wait time for scavenge should be 0 or positive");
+//
+//  CMSHeap* heap = CMSHeap::heap();
+//  double start_time_secs = os::elapsedTime();
+//  double end_time_secs = start_time_secs + (t_millis / ((double) MILLIUNITS));
+//
+//  // Total collections count before waiting loop
+//  unsigned int before_count;
+//  {
+//    MutexLockerEx hl(Heap_lock, Mutex::_no_safepoint_check_flag);
+//    before_count = heap->total_collections();
+//  }
+//
+//  unsigned int loop_count = 0;
+//
+//  while(!should_terminate()) {
+//    double now_time = os::elapsedTime();
+//    long wait_time_millis;
+//
+//    if(t_millis != 0) {
+//      // New wait limit
+//      wait_time_millis = (long) ((end_time_secs - now_time) * MILLIUNITS);
+//      if(wait_time_millis <= 0) {
+//        // Wait time is over
+//        break;
+//      }
+//    } else {
+//      // No wait limit, wait if necessary forever
+//      wait_time_millis = 0;
+//    }
+//
+//    // Wait until the next event or the remaining timeout
+//    {
+//      MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
+//
+//      if (should_terminate() || _collector->_full_gc_requested) {
+//        return;
+//      }
+//      set_CMS_flag(CMS_cms_wants_token);   // to provoke notifies
+//      assert(t_millis == 0 || wait_time_millis > 0, "Sanity");
+//      CGC_lock->wait(Mutex::_no_safepoint_check_flag, wait_time_millis);
+//      clear_CMS_flag(CMS_cms_wants_token);
+//      assert(!CMS_flag_is_set(CMS_cms_has_token | CMS_cms_wants_token),
+//             "Should not be set");
+//    }
+//
+//    // Extra wait time check before entering the heap lock to get the collection count
+//    if(t_millis != 0 && os::elapsedTime() >= end_time_secs) {
+//      // Wait time is over
+//      break;
+//    }
+//
+//    // Total collections count after the event
+//    unsigned int after_count;
+//    {
+//      MutexLockerEx hl(Heap_lock, Mutex::_no_safepoint_check_flag);
+//      after_count = heap->total_collections();
+//    }
+//
+//    if(before_count != after_count) {
+//      // There was a collection - success
+//      break;
+//    }
+//
+//    // Too many loops warning
+//    if(++loop_count == 0) {
+//      log_warning(gc)("wait_on_cms_lock_for_scavenge() has looped %u times", loop_count - 1);
+//    }
+//  }
 }
 
 void ConcurrentMarkSweepThread::sleepBeforeNextCycle() {
