@@ -1,0 +1,2 @@
+# bash configure
+make images

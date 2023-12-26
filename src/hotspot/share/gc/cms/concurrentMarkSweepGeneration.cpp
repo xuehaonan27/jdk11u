@@ -1430,34 +1430,34 @@ void CMSCollector::acquire_control_and_collect(bool full,
   assert(haveFreelistLocks(), "Must be holding free list locks");
   bitMapLock()->unlock();
   releaseFreelistLocks();
-  {
-    MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
-    if (_foregroundGCShouldWait) {
-      // We are going to be waiting for action for the CMS thread;
-      // it had better not be gone (for instance at shutdown)!
-      assert(ConcurrentMarkSweepThread::cmst() != NULL && !ConcurrentMarkSweepThread::cmst()->has_terminated(),
-             "CMS thread must be running");
-      // Wait here until the background collector gives us the go-ahead
-      ConcurrentMarkSweepThread::clear_CMS_flag(
-        ConcurrentMarkSweepThread::CMS_vm_has_token);  // release token
-      // Get a possibly blocked CMS thread going:
-      //   Note that we set _foregroundGCIsActive true above,
-      //   without protection of the CGC_lock.
-      CGC_lock->notify();
-      assert(!ConcurrentMarkSweepThread::vm_thread_wants_cms_token(),
-             "Possible deadlock");
-      while (_foregroundGCShouldWait) {
-        // wait for notification
-        CGC_lock->wait(Mutex::_no_safepoint_check_flag);
-        // Possibility of delay/starvation here, since CMS token does
-        // not know to give priority to VM thread? Actually, i think
-        // there wouldn't be any delay/starvation, but the proof of
-        // that "fact" (?) appears non-trivial. XXX 20011219YSR
-      }
-      ConcurrentMarkSweepThread::set_CMS_flag(
-        ConcurrentMarkSweepThread::CMS_vm_has_token);
-    }
-  }
+  // {
+  //   MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
+  //   if (_foregroundGCShouldWait) {
+  //     // We are going to be waiting for action for the CMS thread;
+  //     // it had better not be gone (for instance at shutdown)!
+  //     assert(ConcurrentMarkSweepThread::cmst() != NULL && !ConcurrentMarkSweepThread::cmst()->has_terminated(),
+  //            "CMS thread must be running");
+  //     // Wait here until the background collector gives us the go-ahead
+  //     ConcurrentMarkSweepThread::clear_CMS_flag(
+  //       ConcurrentMarkSweepThread::CMS_vm_has_token);  // release token
+  //     // Get a possibly blocked CMS thread going:
+  //     //   Note that we set _foregroundGCIsActive true above,
+  //     //   without protection of the CGC_lock.
+  //     CGC_lock->notify();
+  //     assert(!ConcurrentMarkSweepThread::vm_thread_wants_cms_token(),
+  //            "Possible deadlock");
+  //     while (_foregroundGCShouldWait) {
+  //       // wait for notification
+  //       CGC_lock->wait(Mutex::_no_safepoint_check_flag);
+  //       // Possibility of delay/starvation here, since CMS token does
+  //       // not know to give priority to VM thread? Actually, i think
+  //       // there wouldn't be any delay/starvation, but the proof of
+  //       // that "fact" (?) appears non-trivial. XXX 20011219YSR
+  //     }
+  //     ConcurrentMarkSweepThread::set_CMS_flag(
+  //       ConcurrentMarkSweepThread::CMS_vm_has_token);
+  //   }
+  // }
   // The CMS_token is already held.  Get back the other locks.
   assert(ConcurrentMarkSweepThread::vm_thread_has_cms_token(),
          "VM thread should have CMS token");
@@ -3585,7 +3585,7 @@ bool CMSCollector::do_marking_st() {
   // If _restart_addr is non-NULL, a marking stack overflow
   // occurred; we need to do a fresh iteration from the
   // indicated restart address.
-//  while (_restart_addr != NULL) {
+ while (_restart_addr != NULL) {
 //    if (_foregroundGCIsActive) {
 //      // We may be running into repeated stack overflows, having
 //      // reached the limit of the stack size, while making very
@@ -6972,7 +6972,8 @@ bool CMSPrecleanRefsYieldClosure::should_return() {
   if (ConcurrentMarkSweepThread::should_yield()) {
     do_yield_work();
   }
-  return _collector->foregroundGCIsActive();
+  // return _collector->foregroundGCIsActive();
+  return false;
 }
 
 void MarkFromDirtyCardsClosure::do_MemRegion(MemRegion mr) {
