@@ -682,9 +682,9 @@ class CMSCollector: public CHeapObj<mtGC> {
   // Signaling/State related to coordination between fore- and background GC
   // Note: When the baton has been passed from background GC to foreground GC,
   // _foregroundGCIsActive is true and _foregroundGCShouldWait is false.
-  static bool _foregroundGCIsActive;    // true iff foreground collector is active or
+//  static bool _foregroundGCIsActive;    // true iff foreground collector is active or
                                  // wants to go active
-  static bool _foregroundGCShouldWait;  // true iff background GC is active and has not
+//  static bool _foregroundGCShouldWait;  // true iff background GC is active and has not
                                  // yet passed the baton to the foreground GC
 
   // Support for CMSScheduleRemark (abortable preclean)
@@ -944,10 +944,10 @@ class CMSCollector: public CHeapObj<mtGC> {
   void incrementNumDirtyCards(size_t num) { _numDirtyCards += num; }
   size_t  numDirtyCards()                 { return _numDirtyCards; }
 
-  static bool foregroundGCShouldWait() { return _foregroundGCShouldWait; }
-  static void set_foregroundGCShouldWait(bool v) { _foregroundGCShouldWait = v; }
-  static bool foregroundGCIsActive() { return _foregroundGCIsActive; }
-  static void set_foregroundGCIsActive(bool v) { _foregroundGCIsActive = v; }
+//  static bool foregroundGCShouldWait() { return _foregroundGCShouldWait; }
+//  static void set_foregroundGCShouldWait(bool v) { _foregroundGCShouldWait = v; }
+//  static bool foregroundGCIsActive() { return _foregroundGCIsActive; }
+//  static void set_foregroundGCIsActive(bool v) { _foregroundGCIsActive = v; }
   size_t sweep_count() const             { return _sweep_count; }
   void   increment_sweep_count()         { _sweep_count++; }
 

@@ -444,8 +444,8 @@ void CMSStats::print_on(outputStream *st) const {
 
 CMSCollector::CollectorState CMSCollector::_collectorState =
                              CMSCollector::Idling;
-bool CMSCollector::_foregroundGCIsActive = false;
-bool CMSCollector::_foregroundGCShouldWait = false;
+//bool CMSCollector::_foregroundGCIsActive = false;
+//bool CMSCollector::_foregroundGCShouldWait = false;
 
 CMSCollector::CMSCollector(ConcurrentMarkSweepGeneration* cmsGen,
                            CardTableRS*                   ct,
@@ -1419,7 +1419,7 @@ void CMSCollector::acquire_control_and_collect(bool full,
 
   // Signal to a possibly ongoing concurrent collection that
   // we want to do a foreground collection.
-  _foregroundGCIsActive = true;
+//  _foregroundGCIsActive = true;
 
   // release locks and wait for a notify from the background collector
   // releasing the locks in only necessary for phases which
@@ -1514,7 +1514,7 @@ void CMSCollector::acquire_control_and_collect(bool full,
   // Reset the expansion cause, now that we just completed
   // a collection cycle.
   clear_expansion_cause();
-  _foregroundGCIsActive = false;
+//  _foregroundGCIsActive = false;
   return;
 }
 
@@ -1695,21 +1695,21 @@ class ReleaseForegroundGC: public StackObj {
   CMSCollector* _c;
  public:
   ReleaseForegroundGC(CMSCollector* c) : _c(c) {
-    assert(_c->_foregroundGCShouldWait, "Else should not need to call");
-    MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
-    // allow a potentially blocked foreground collector to proceed
-    _c->_foregroundGCShouldWait = false;
-    if (_c->_foregroundGCIsActive) {
-      CGC_lock->notify();
-    }
-    assert(!ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-           "Possible deadlock");
+//    assert(_c->_foregroundGCShouldWait, "Else should not need to call");
+//    MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
+//    // allow a potentially blocked foreground collector to proceed
+//    _c->_foregroundGCShouldWait = false;
+//    if (_c->_foregroundGCIsActive) {
+//      CGC_lock->notify();
+//    }
+//    assert(!ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//           "Possible deadlock");
   }
 
   ~ReleaseForegroundGC() {
-    assert(!_c->_foregroundGCShouldWait, "Usage protocol violation?");
-    MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
-    _c->_foregroundGCShouldWait = true;
+//    assert(!_c->_foregroundGCShouldWait, "Usage protocol violation?");
+//    MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
+//    _c->_foregroundGCShouldWait = true;
   }
 };
 
@@ -1723,12 +1723,14 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
     MutexLockerEx hl(Heap_lock, safepoint_check);
     FreelistLocker fll(this);
     MutexLockerEx x(CGC_lock, safepoint_check);
-    if (_foregroundGCIsActive) {
-      // The foreground collector is. Skip this
-      // background collection.
-      assert(!_foregroundGCShouldWait, "Should be clear");
-      return;
-    } else {
+//    if (_foregroundGCIsActive) {
+//      // The foreground collector is. Skip this
+//      // background collection.
+//      assert(!_foregroundGCShouldWait, "Should be clear");
+//      return;
+//    }
+//    else {
+    {
       assert(_collectorState == Idling, "Should be idling before start.");
       _collectorState = InitialMarking;
       register_gc_start(cause);
@@ -1790,8 +1792,8 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
       if (waitForForegroundGC()) {
         // We yielded to a foreground GC, nothing more to be
         // done this round.
-        assert(_foregroundGCShouldWait == false, "We set it to false in "
-               "waitForForegroundGC()");
+//        assert(_foregroundGCShouldWait == false, "We set it to false in "
+//               "waitForForegroundGC()");
         log_debug(gc, state)("CMS Thread " INTPTR_FORMAT " exiting collection CMS state %d",
                              p2i(Thread::current()), _collectorState);
         return;
@@ -1807,8 +1809,8 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
       }
     }
 
-    assert(_foregroundGCShouldWait, "Foreground collector, if active, "
-      "should be waiting");
+//    assert(_foregroundGCShouldWait, "Foreground collector, if active, "
+//      "should be waiting");
 
     switch (_collectorState) {
       case InitialMarking:
@@ -1828,7 +1830,7 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
           assert(_collectorState == Precleaning, "Collector state should "
             "have changed");
         } else {
-          assert(_foregroundGCIsActive, "Internal state inconsistency");
+//          assert(_foregroundGCIsActive, "Internal state inconsistency");
         }
         break;
       case Precleaning:
@@ -1850,7 +1852,7 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
           VM_CMS_Final_Remark final_remark_op(this);
           VMThread::execute(&final_remark_op);
         }
-        assert(_foregroundGCShouldWait, "block post-condition");
+//        assert(_foregroundGCShouldWait, "block post-condition");
         break;
       case Sweeping:
         // final marking in checkpointRootsFinal has been completed
@@ -1899,24 +1901,24 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
     }
     log_debug(gc, state)("  Thread " INTPTR_FORMAT " done - next CMS state %d",
                          p2i(Thread::current()), _collectorState);
-    assert(_foregroundGCShouldWait, "block post-condition");
+//    assert(_foregroundGCShouldWait, "block post-condition");
   }
 
   // Should this be in gc_epilogue?
   heap->counters()->update_counters();
 
-  {
-    // Clear _foregroundGCShouldWait and, in the event that the
-    // foreground collector is waiting, notify it, before
-    // returning.
-    MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
-    _foregroundGCShouldWait = false;
-    if (_foregroundGCIsActive) {
-      CGC_lock->notify();
-    }
-    assert(!ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-           "Possible deadlock");
-  }
+//  {
+//    // Clear _foregroundGCShouldWait and, in the event that the
+//    // foreground collector is waiting, notify it, before
+//    // returning.
+//    MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
+//    _foregroundGCShouldWait = false;
+//    if (_foregroundGCIsActive) {
+//      CGC_lock->notify();
+//    }
+//    assert(!ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//           "Possible deadlock");
+//  }
   log_debug(gc, state)("CMS Thread " INTPTR_FORMAT " exiting collection CMS state %d",
                        p2i(Thread::current()), _collectorState);
   log_info(gc, heap)("Old: " SIZE_FORMAT "K->" SIZE_FORMAT "K("  SIZE_FORMAT "K)",
@@ -1951,40 +1953,41 @@ void CMSCollector::report_heap_summary(GCWhen::Type when) {
 }
 
 bool CMSCollector::waitForForegroundGC() {
-  bool res = false;
-  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-         "CMS thread should have CMS token");
-  // Block the foreground collector until the
-  // background collectors decides whether to
-  // yield.
-  MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
-  _foregroundGCShouldWait = true;
-  if (_foregroundGCIsActive) {
-    // The background collector yields to the
-    // foreground collector and returns a value
-    // indicating that it has yielded.  The foreground
-    // collector can proceed.
-    res = true;
-    _foregroundGCShouldWait = false;
-    ConcurrentMarkSweepThread::clear_CMS_flag(
-      ConcurrentMarkSweepThread::CMS_cms_has_token);
-    ConcurrentMarkSweepThread::set_CMS_flag(
-      ConcurrentMarkSweepThread::CMS_cms_wants_token);
-    // Get a possibly blocked foreground thread going
-    CGC_lock->notify();
-    log_debug(gc, state)("CMS Thread " INTPTR_FORMAT " waiting at CMS state %d",
-                         p2i(Thread::current()), _collectorState);
-    while (_foregroundGCIsActive) {
-      CGC_lock->wait(Mutex::_no_safepoint_check_flag);
-    }
-    ConcurrentMarkSweepThread::set_CMS_flag(
-      ConcurrentMarkSweepThread::CMS_cms_has_token);
-    ConcurrentMarkSweepThread::clear_CMS_flag(
-      ConcurrentMarkSweepThread::CMS_cms_wants_token);
-  }
-  log_debug(gc, state)("CMS Thread " INTPTR_FORMAT " continuing at CMS state %d",
-                       p2i(Thread::current()), _collectorState);
-  return res;
+//  bool res = false;
+//  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//         "CMS thread should have CMS token");
+//  // Block the foreground collector until the
+//  // background collectors decides whether to
+//  // yield.
+//  MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
+//  _foregroundGCShouldWait = true;
+//  if (_foregroundGCIsActive) {
+//    // The background collector yields to the
+//    // foreground collector and returns a value
+//    // indicating that it has yielded.  The foreground
+//    // collector can proceed.
+//    res = true;
+//    _foregroundGCShouldWait = false;
+//    ConcurrentMarkSweepThread::clear_CMS_flag(
+//      ConcurrentMarkSweepThread::CMS_cms_has_token);
+//    ConcurrentMarkSweepThread::set_CMS_flag(
+//      ConcurrentMarkSweepThread::CMS_cms_wants_token);
+//    // Get a possibly blocked foreground thread going
+//    CGC_lock->notify();
+//    log_debug(gc, state)("CMS Thread " INTPTR_FORMAT " waiting at CMS state %d",
+//                         p2i(Thread::current()), _collectorState);
+//    while (_foregroundGCIsActive) {
+//      CGC_lock->wait(Mutex::_no_safepoint_check_flag);
+//    }
+//    ConcurrentMarkSweepThread::set_CMS_flag(
+//      ConcurrentMarkSweepThread::CMS_cms_has_token);
+//    ConcurrentMarkSweepThread::clear_CMS_flag(
+//      ConcurrentMarkSweepThread::CMS_cms_wants_token);
+//  }
+//  log_debug(gc, state)("CMS Thread " INTPTR_FORMAT " continuing at CMS state %d",
+//                       p2i(Thread::current()), _collectorState);
+//  return res;
+  return false;
 }
 
 // Because of the need to lock the free lists and other structures in
@@ -2951,7 +2954,7 @@ bool CMSCollector::markFromRoots() {
   if (res) {
     _collectorState = Precleaning;
   } else { // We failed and a foreground collection wants to take over
-    assert(_foregroundGCIsActive, "internal state inconsistency");
+//    assert(_foregroundGCIsActive, "internal state inconsistency");
     assert(_restart_addr == NULL,  "foreground will restart from scratch");
     log_debug(gc)("bailing out to foreground collection");
   }
@@ -3077,8 +3080,9 @@ class CMSConcMarkingTask: public YieldingFlexibleGangTask {
 
   void work(uint worker_id);
   bool should_yield() {
-    return    ConcurrentMarkSweepThread::should_yield()
-           && !_collector->foregroundGCIsActive();
+//    return    ConcurrentMarkSweepThread::should_yield()
+//           && !_collector->foregroundGCIsActive();
+    return    ConcurrentMarkSweepThread::should_yield();
   }
 
   virtual void coordinator_yield();  // stuff done by coordinator
@@ -3489,8 +3493,7 @@ void CMSConcMarkingTask::coordinator_yield() {
   //
   // Tony 2006.06.29
   for (unsigned i = 0; i < CMSCoordinatorYieldSleepCount &&
-                   ConcurrentMarkSweepThread::should_yield() &&
-                   !CMSCollector::foregroundGCIsActive(); ++i) {
+                   ConcurrentMarkSweepThread::should_yield(); ++i) {
     os::sleep(Thread::current(), 1, false);
   }
 
@@ -3539,18 +3542,18 @@ bool CMSCollector::do_marking_mt() {
     // If _restart_addr is non-NULL, a marking stack overflow
     // occurred; we need to do a fresh marking iteration from the
     // indicated restart address.
-    if (_foregroundGCIsActive) {
-      // We may be running into repeated stack overflows, having
-      // reached the limit of the stack size, while making very
-      // slow forward progress. It may be best to bail out and
-      // let the foreground collector do its job.
-      // Clear _restart_addr, so that foreground GC
-      // works from scratch. This avoids the headache of
-      // a "rescan" which would otherwise be needed because
-      // of the dirty mod union table & card table.
-      _restart_addr = NULL;
-      return false;
-    }
+//    if (_foregroundGCIsActive) {
+//      // We may be running into repeated stack overflows, having
+//      // reached the limit of the stack size, while making very
+//      // slow forward progress. It may be best to bail out and
+//      // let the foreground collector do its job.
+//      // Clear _restart_addr, so that foreground GC
+//      // works from scratch. This avoids the headache of
+//      // a "rescan" which would otherwise be needed because
+//      // of the dirty mod union table & card table.
+//      _restart_addr = NULL;
+//      return false;
+//    }
     // Adjust the task to restart from _restart_addr
     tsk.reset(_restart_addr);
     cms_space ->initialize_sequential_subtasks_for_marking(num_workers,
@@ -3582,19 +3585,19 @@ bool CMSCollector::do_marking_st() {
   // If _restart_addr is non-NULL, a marking stack overflow
   // occurred; we need to do a fresh iteration from the
   // indicated restart address.
-  while (_restart_addr != NULL) {
-    if (_foregroundGCIsActive) {
-      // We may be running into repeated stack overflows, having
-      // reached the limit of the stack size, while making very
-      // slow forward progress. It may be best to bail out and
-      // let the foreground collector do its job.
-      // Clear _restart_addr, so that foreground GC
-      // works from scratch. This avoids the headache of
-      // a "rescan" which would otherwise be needed because
-      // of the dirty mod union table & card table.
-      _restart_addr = NULL;
-      return false;  // indicating failure to complete marking
-    }
+//  while (_restart_addr != NULL) {
+//    if (_foregroundGCIsActive) {
+//      // We may be running into repeated stack overflows, having
+//      // reached the limit of the stack size, while making very
+//      // slow forward progress. It may be best to bail out and
+//      // let the foreground collector do its job.
+//      // Clear _restart_addr, so that foreground GC
+//      // works from scratch. This avoids the headache of
+//      // a "rescan" which would otherwise be needed because
+//      // of the dirty mod union table & card table.
+//      _restart_addr = NULL;
+//      return false;  // indicating failure to complete marking
+//    }
     // Deal with stack overflow:
     // we restart marking from _restart_addr
     HeapWord* ra = _restart_addr;
@@ -5256,30 +5259,30 @@ void CMSCollector::refProcessingWork() {
 
 #ifndef PRODUCT
 void CMSCollector::check_correct_thread_executing() {
-  Thread* t = Thread::current();
-  // Only the VM thread or the CMS thread should be here.
-  assert(t->is_ConcurrentGC_thread() || t->is_VM_thread(),
-         "Unexpected thread type");
-  // If this is the vm thread, the foreground process
-  // should not be waiting.  Note that _foregroundGCIsActive is
-  // true while the foreground collector is waiting.
-  if (_foregroundGCShouldWait) {
-    // We cannot be the VM thread
-    assert(t->is_ConcurrentGC_thread(),
-           "Should be CMS thread");
-  } else {
-    // We can be the CMS thread only if we are in a stop-world
-    // phase of CMS collection.
-    if (t->is_ConcurrentGC_thread()) {
-      assert(_collectorState == InitialMarking ||
-             _collectorState == FinalMarking,
-             "Should be a stop-world phase");
-      // The CMS thread should be holding the CMS_token.
-      assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
-             "Potential interference with concurrently "
-             "executing VM thread");
-    }
-  }
+//  Thread* t = Thread::current();
+//  // Only the VM thread or the CMS thread should be here.
+//  assert(t->is_ConcurrentGC_thread() || t->is_VM_thread(),
+//         "Unexpected thread type");
+//  // If this is the vm thread, the foreground process
+//  // should not be waiting.  Note that _foregroundGCIsActive is
+//  // true while the foreground collector is waiting.
+//  if (_foregroundGCShouldWait) {
+//    // We cannot be the VM thread
+//    assert(t->is_ConcurrentGC_thread(),
+//           "Should be CMS thread");
+//  } else {
+//    // We can be the CMS thread only if we are in a stop-world
+//    // phase of CMS collection.
+//    if (t->is_ConcurrentGC_thread()) {
+//      assert(_collectorState == InitialMarking ||
+//             _collectorState == FinalMarking,
+//             "Should be a stop-world phase");
+//      // The CMS thread should be holding the CMS_token.
+//      assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
+//             "Potential interference with concurrently "
+//             "executing VM thread");
+//    }
+//  }
 }
 #endif
 
@@ -5493,7 +5496,7 @@ void CMSCollector::reset_concurrent() {
       MemRegion chunk(curAddr, MIN2(CMSBitMapYieldQuantum, remaining));
       _markBitMap.clear_large_range(chunk);
       if (ConcurrentMarkSweepThread::should_yield() &&
-          !foregroundGCIsActive() &&
+//          !foregroundGCIsActive() &&
           CMSYield) {
         assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
                "CMS thread should hold CMS token");
@@ -5505,8 +5508,10 @@ void CMSCollector::reset_concurrent() {
 
         // See the comment in coordinator_yield()
         for (unsigned i = 0; i < CMSYieldSleepCount &&
-                         ConcurrentMarkSweepThread::should_yield() &&
-                         !CMSCollector::foregroundGCIsActive(); ++i) {
+                         ConcurrentMarkSweepThread::should_yield()
+//                             && !CMSCollector::foregroundGCIsActive()
+                ; ++i)
+        {
           os::sleep(Thread::current(), 1, false);
         }
 
@@ -5572,9 +5577,9 @@ size_t const CMSCollector::skip_header_HeapWords() {
 // the CMS thread and yet continue to run the VM for a while
 // after that.
 void CMSCollector::verify_ok_to_terminate() const {
-  assert(Thread::current()->is_ConcurrentGC_thread(),
-         "should be called by CMS thread");
-  assert(!_foregroundGCShouldWait, "should be false");
+//  assert(Thread::current()->is_ConcurrentGC_thread(),
+//         "should be called by CMS thread");
+//  assert(!_foregroundGCShouldWait, "should be false");
   // We could check here that all the various low-level locks
   // are not held by the CMS thread, but that is overkill; see
   // also CMSThread::verify_ok_to_terminate() where the CGC_lock
@@ -5965,8 +5970,9 @@ void MarkRefsIntoAndScanClosure::do_yield_work() {
   // See the comment in coordinator_yield()
   for (unsigned i = 0;
        i < CMSYieldSleepCount &&
-       ConcurrentMarkSweepThread::should_yield() &&
-       !CMSCollector::foregroundGCIsActive();
+       ConcurrentMarkSweepThread::should_yield()
+//       && !CMSCollector::foregroundGCIsActive()
+          ;
        ++i) {
     os::sleep(Thread::current(), 1, false);
   }
@@ -6121,8 +6127,9 @@ void ScanMarkedObjectsAgainCarefullyClosure::do_yield_work() {
 
   // See the comment in coordinator_yield()
   for (unsigned i = 0; i < CMSYieldSleepCount &&
-                   ConcurrentMarkSweepThread::should_yield() &&
-                   !CMSCollector::foregroundGCIsActive(); ++i) {
+                   ConcurrentMarkSweepThread::should_yield()
+//                       && !CMSCollector::foregroundGCIsActive()
+          ; ++i) {
     os::sleep(Thread::current(), 1, false);
   }
 
@@ -6188,8 +6195,7 @@ void SurvivorSpacePrecleanClosure::do_yield_work() {
 
   // See the comment in coordinator_yield()
   for (unsigned i = 0; i < CMSYieldSleepCount &&
-                       ConcurrentMarkSweepThread::should_yield() &&
-                       !CMSCollector::foregroundGCIsActive(); ++i) {
+                       ConcurrentMarkSweepThread::should_yield(); ++i) {
     os::sleep(Thread::current(), 1, false);
   }
 
@@ -6339,8 +6345,7 @@ void MarkFromRootsClosure::do_yield_work() {
 
   // See the comment in coordinator_yield()
   for (unsigned i = 0; i < CMSYieldSleepCount &&
-                       ConcurrentMarkSweepThread::should_yield() &&
-                       !CMSCollector::foregroundGCIsActive(); ++i) {
+                       ConcurrentMarkSweepThread::should_yield(); ++i) {
     os::sleep(Thread::current(), 1, false);
   }
 
@@ -6953,8 +6958,7 @@ void CMSPrecleanRefsYieldClosure::do_yield_work() {
 
   // See the comment in coordinator_yield()
   for (unsigned i = 0; i < CMSYieldSleepCount &&
-                       ConcurrentMarkSweepThread::should_yield() &&
-                       !CMSCollector::foregroundGCIsActive(); ++i) {
+                       ConcurrentMarkSweepThread::should_yield(); ++i) {
     os::sleep(Thread::current(), 1, false);
   }
 
@@ -7518,8 +7522,7 @@ void SweepClosure::do_yield_work(HeapWord* addr) {
 
   // See the comment in coordinator_yield()
   for (unsigned i = 0; i < CMSYieldSleepCount &&
-                       ConcurrentMarkSweepThread::should_yield() &&
-                       !CMSCollector::foregroundGCIsActive(); ++i) {
+                       ConcurrentMarkSweepThread::should_yield(); ++i) {
     os::sleep(Thread::current(), 1, false);
   }
 

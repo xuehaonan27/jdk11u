@@ -255,7 +255,8 @@ inline bool CMSCollector::should_abort_preclean() const {
   // We are in the midst of an "abortable preclean" and either
   // scavenge is done or foreground GC wants to take over collection
   return _collectorState == AbortablePreclean &&
-         (_abort_preclean || _foregroundGCIsActive ||
+         (_abort_preclean ||
+//          _foregroundGCIsActive ||
           CMSHeap::heap()->incremental_collection_will_fail(true /* consult_young */));
 }
 
@@ -385,15 +386,13 @@ void ConcurrentMarkSweepGeneration::oop_since_save_marks_iterate(OopClosureType*
 
 inline void MarkFromRootsClosure::do_yield_check() {
   if (ConcurrentMarkSweepThread::should_yield() &&
-      !_collector->foregroundGCIsActive() &&
       _yield) {
     do_yield_work();
   }
 }
 
 inline void ParMarkFromRootsClosure::do_yield_check() {
-  if (ConcurrentMarkSweepThread::should_yield() &&
-      !_collector->foregroundGCIsActive()) {
+  if (ConcurrentMarkSweepThread::should_yield()) {
     do_yield_work();
   }
 }
@@ -410,7 +409,6 @@ inline void ParPushOrMarkClosure::do_yield_check() {
 // should be aborted.
 inline bool ScanMarkedObjectsAgainCarefullyClosure::do_yield_check() {
   if (ConcurrentMarkSweepThread::should_yield() &&
-      !_collector->foregroundGCIsActive() &&
       _yield) {
     // Sample young gen size before and after yield
     _collector->sample_eden();
@@ -423,7 +421,6 @@ inline bool ScanMarkedObjectsAgainCarefullyClosure::do_yield_check() {
 
 inline void SurvivorSpacePrecleanClosure::do_yield_check() {
   if (ConcurrentMarkSweepThread::should_yield() &&
-      !_collector->foregroundGCIsActive() &&
       _yield) {
     // Sample young gen size before and after yield
     _collector->sample_eden();
@@ -434,7 +431,6 @@ inline void SurvivorSpacePrecleanClosure::do_yield_check() {
 
 inline void SweepClosure::do_yield_check(HeapWord* addr) {
   if (ConcurrentMarkSweepThread::should_yield() &&
-      !_collector->foregroundGCIsActive() &&
       _yield) {
     do_yield_work(addr);
   }
@@ -444,7 +440,6 @@ inline void MarkRefsIntoAndScanClosure::do_yield_check() {
   // The conditions are ordered for the remarking phase
   // when _yield is false.
   if (_yield &&
-      !_collector->foregroundGCIsActive() &&
       ConcurrentMarkSweepThread::should_yield()) {
     do_yield_work();
   }
