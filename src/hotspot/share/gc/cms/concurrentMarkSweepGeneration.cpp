@@ -600,11 +600,11 @@ CMSCollector::CMSCollector(ConcurrentMarkSweepGeneration* cmsGen,
   ConcurrentMarkSweepGeneration::set_collector(this);
 
   // Create & start a CMS thread for this CMS collector
-  _cmsThread = ConcurrentMarkSweepThread::start(this);
-  assert(cmsThread() != NULL, "CMS Thread should have been created");
-  assert(cmsThread()->collector() == this,
-         "CMS Thread should refer to this gen");
-  assert(CGC_lock != NULL, "Where's the CGC_lock?");
+//  _cmsThread = ConcurrentMarkSweepThread::start(this);
+  assert(cmsThread() == NULL, "CMS Thread should have been removed");
+//  assert(cmsThread()->collector() == this,
+//         "CMS Thread should refer to this gen");
+//  assert(CGC_lock != NULL, "Where's the CGC_lock?");
 
   // Support for parallelizing young gen rescan
   CMSHeap* heap = CMSHeap::heap();
@@ -1307,6 +1307,7 @@ void CMSCollector::collect(bool   full,
 }
 
 void CMSCollector::request_full_gc(unsigned int full_gc_count, GCCause::Cause cause) {
+  assert(false, "Should not reach here");
   CMSHeap* heap = CMSHeap::heap();
   unsigned int gc_count = heap->total_full_collections();
   if (gc_count == full_gc_count) {

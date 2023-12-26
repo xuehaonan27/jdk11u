@@ -172,15 +172,16 @@ bool CMSHeap::create_cms_collector() {
 }
 
 void CMSHeap::collect(GCCause::Cause cause) {
-  if (should_do_concurrent_full_gc(cause)) {
-    // Mostly concurrent full collection.
-    collect_mostly_concurrent(cause);
-  } else {
+//  if (should_do_concurrent_full_gc(cause)) {
+//    // Mostly concurrent full collection.
+//    collect_mostly_concurrent(cause);
+//  } else {
     GenCollectedHeap::collect(cause);
-  }
+//  }
 }
 
 bool CMSHeap::should_do_concurrent_full_gc(GCCause::Cause cause) {
+  assert(false, "Should not reach here");
   switch (cause) {
     case GCCause::_gc_locker:           return GCLockerInvokesConcurrent;
     case GCCause::_java_lang_system_gc:
@@ -190,6 +191,7 @@ bool CMSHeap::should_do_concurrent_full_gc(GCCause::Cause cause) {
 }
 
 void CMSHeap::collect_mostly_concurrent(GCCause::Cause cause) {
+  assert(false, "Should not reach here");
   assert(!Heap_lock->owned_by_self(), "Should not own Heap_lock");
 
   MutexLocker ml(Heap_lock);
@@ -204,6 +206,7 @@ void CMSHeap::collect_mostly_concurrent(GCCause::Cause cause) {
 }
 
 void CMSHeap::stop() {
+  assert(false, "Should not reach here");
   ConcurrentMarkSweepThread::cmst()->stop();
 }
 

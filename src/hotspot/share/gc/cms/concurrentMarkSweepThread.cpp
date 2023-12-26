@@ -103,15 +103,16 @@ void ConcurrentMarkSweepThread::verify_ok_to_terminate() const {
 // create and start a new ConcurrentMarkSweep Thread for given CMS generation
 ConcurrentMarkSweepThread* ConcurrentMarkSweepThread::start(CMSCollector* collector) {
   guarantee(_cmst == NULL, "start() called twice!");
-  ConcurrentMarkSweepThread* th = new ConcurrentMarkSweepThread(collector);
-  assert(_cmst == th, "Where did the just-created CMS thread go?");
-  return th;
+//  ConcurrentMarkSweepThread* th = new ConcurrentMarkSweepThread(collector);
+//  assert(_cmst == th, "Where did the just-created CMS thread go?");
+  return NULL;
 }
 
 void ConcurrentMarkSweepThread::stop_service() {
   // Now post a notify on CGC_lock so as to nudge
   // CMS thread(s) that might be slumbering in
   // sleepBeforeNextCycle.
+  assert(false, "Should not reach here");
   MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
   CGC_lock->notify_all();
 }
