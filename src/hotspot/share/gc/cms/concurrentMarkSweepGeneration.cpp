@@ -1586,7 +1586,8 @@ void CMSCollector::do_compaction_work(bool clear_all_soft_refs) {
                                             _intra_sweep_estimate.padded_average());
   }
 
-  GenMarkSweep::invoke_at_safepoint(ref_processor(), clear_all_soft_refs);
+  collect_in_background(heap->gc_cause());
+//  GenMarkSweep::invoke_at_safepoint(ref_processor(), clear_all_soft_refs);
   #ifdef ASSERT
     CompactibleFreeListSpace* cms_space = _cmsGen->cmsSpace();
     size_t free_size = cms_space->free();
