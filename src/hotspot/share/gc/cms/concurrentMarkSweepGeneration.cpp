@@ -601,6 +601,7 @@ CMSCollector::CMSCollector(ConcurrentMarkSweepGeneration* cmsGen,
 
   // Create & start a CMS thread for this CMS collector
 //  _cmsThread = ConcurrentMarkSweepThread::start(this);
+  _cmsThread = NULL;
   assert(cmsThread() == NULL, "CMS Thread should have been removed");
 //  assert(cmsThread()->collector() == this,
 //         "CMS Thread should refer to this gen");
@@ -1716,8 +1717,8 @@ class ReleaseForegroundGC: public StackObj {
 };
 
 void CMSCollector::collect_in_background(GCCause::Cause cause) {
-  assert(Thread::current()->is_ConcurrentGC_thread(),
-    "A CMS asynchronous collection is only allowed on a CMS thread.");
+  assert(Thread::current()->is_VM_thread(),
+    "hua: A modified collection is only allowed on a VM thread.");
 
   CMSHeap* heap = CMSHeap::heap();
   {
