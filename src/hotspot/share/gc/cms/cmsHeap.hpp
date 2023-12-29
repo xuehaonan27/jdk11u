@@ -44,6 +44,7 @@ class ThreadClosure;
 class WorkGang;
 
 class CMSHeap : public GenCollectedHeap {
+  friend class CMSCollector;
 public:
   CMSHeap(GenCollectorPolicy *policy);
 
@@ -113,6 +114,19 @@ public:
   template <typename OopClosureType1, typename OopClosureType2>
   void oop_since_save_marks_iterate(OopClosureType1* cur,
                                     OopClosureType2* older);
+                                    
+
+
+protected:
+  // Helper function for two callbacks below.
+  // Considers collection of the first max_level+1 generations.
+  virtual void do_collection(bool           full,
+                     bool           clear_all_soft_refs,
+                     size_t         size,
+                     bool           is_tlab,
+                     GenerationType max_generation);
+  virtual void wait_for_background(uint _full_gc_count_before);
+
 
 private:
   WorkGang* _workers;

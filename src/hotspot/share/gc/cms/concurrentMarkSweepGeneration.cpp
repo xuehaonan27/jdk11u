@@ -1310,7 +1310,7 @@ void CMSCollector::collect(bool   full,
 }
 
 void CMSCollector::request_full_gc(unsigned int full_gc_count, GCCause::Cause cause) {
-  assert(false, "Should not reach here");
+  // assert(false, "Should not reach here");
   CMSHeap* heap = CMSHeap::heap();
   unsigned int gc_count = heap->total_full_collections();
   if (gc_count == full_gc_count) {
@@ -1872,9 +1872,9 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
           stats().record_cms_begin();
           VM_CMS_Initial_Mark initial_mark_op(this);
 //          VMThread::execute(&initial_mark_op);
-          initial_mark_op->doit_prologue();
-          initial_mark_op->doit();
-          initial_mark_op->doit_epilogue();
+          initial_mark_op.doit_prologue();
+          initial_mark_op.doit();
+          initial_mark_op.doit_epilogue();
         }
         // The collector state may be any legal state at this point
         // since the background collector may have yielded to the
@@ -1906,9 +1906,9 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
 //          ReleaseForegroundGC x(this);
 
           VM_CMS_Final_Remark final_remark_op(this);
-          final_remark_op->doit_prologue();
-          final_remark_op->doit();
-          final_remark_op->doit_epilogue();
+          final_remark_op.doit_prologue();
+          final_remark_op.doit();
+          final_remark_op.doit_epilogue();
 //          VMThread::execute(&final_remark_op);
         }
 //        assert(_foregroundGCShouldWait, "block post-condition");

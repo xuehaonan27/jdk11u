@@ -56,7 +56,7 @@ void ConcurrentGCThread::initialize_in_thread() {
 }
 
 void ConcurrentGCThread::wait_for_universe_init() {
-  assert(!UseConcMarkSweepGC, "CMS should not reach here");
+  // assert(!UseConcMarkSweepGC, "CMS should not reach here");
   MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
   while (!is_init_completed() && !_should_terminate) {
     CGC_lock->wait(Mutex::_no_safepoint_check_flag, 1);

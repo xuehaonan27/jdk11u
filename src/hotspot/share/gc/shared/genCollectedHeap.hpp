@@ -134,14 +134,16 @@ protected:
   HeapWord* attempt_allocation(size_t size,
                                bool   is_tlab,
                                bool   first_only);
-
+                               
   // Helper function for two callbacks below.
   // Considers collection of the first max_level+1 generations.
-  void do_collection(bool           full,
+  virtual void do_collection(bool           full,
                      bool           clear_all_soft_refs,
                      size_t         size,
                      bool           is_tlab,
                      GenerationType max_generation);
+  
+  virtual void wait_for_background(uint _full_gc_count_before);
 
   // Callback from VM_GenCollectForAllocation operation.
   // This function does everything necessary/possible to satisfy an

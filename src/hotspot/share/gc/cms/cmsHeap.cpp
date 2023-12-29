@@ -218,6 +218,18 @@ void CMSHeap::safepoint_synchronize_end() {
   ConcurrentMarkSweepThread::desynchronize(false);
 }
 
+void CMSHeap::wait_for_background(uint _full_gc_count_before){
+  MutexLockerEx x(FullGCCount_lock, Mutex::_no_safepoint_check_flag);
+  // Either a concurrent or a stop-world full gc is sufficient
+  // witness to our request.
+  CMSHeap* heap = this;
+  while (heap->total_full_collections_completed() <= _full_gc_count_before) {
+    FullGCCount_lock->wait(Mutex::_no_safepoint_check_flag);
+  }
+}
+
+
+
 void CMSHeap::cms_process_roots(StrongRootsScope* scope,
                                 bool young_gen_as_roots,
                                 ScanningOption so,

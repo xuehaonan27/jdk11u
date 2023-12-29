@@ -538,202 +538,156 @@ void GenCollectedHeap::collect_generation(Generation* gen, bool full, size_t siz
 }
 
 
-//void GenCollectedHeap::do_collection(bool           full,
-//                                     bool           clear_all_soft_refs,
-//                                     size_t         size,
-//                                     bool           is_tlab,
-//                                     GenerationType max_generation) {
-//  ResourceMark rm;
-//  DEBUG_ONLY(Thread* my_thread = Thread::current();)
-//
-//  assert(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
-//  assert(my_thread->is_VM_thread() ||
-//         my_thread->is_ConcurrentGC_thread(),
-//         "incorrect thread type capability");
-//  assert(Heap_lock->is_locked(),
-//         "the requesting thread should have the Heap_lock");
-//  guarantee(!is_gc_active(), "collection is not reentrant");
-//
-//  if (GCLocker::check_active_before_gc()) {
-//    return; // GC is disabled (e.g. JNI GetXXXCritical operation)
-//  }
-//
-//  GCIdMark gc_id_mark;
-//
-//  const bool do_clear_all_soft_refs = clear_all_soft_refs ||
-//                                      soft_ref_policy()->should_clear_all_soft_refs();
-//
-//  ClearedAllSoftRefs casr(do_clear_all_soft_refs, soft_ref_policy());
-//
-//  print_heap_before_gc();
-//
-//  {
-//    FlagSetting fl(_is_gc_active, true);
-//
-//    bool complete = full && (max_generation == OldGen);
-//    bool old_collects_young = complete && !ScavengeBeforeFullGC;
-//    bool do_young_collection = !old_collects_young && _young_gen->should_collect(full, size, is_tlab);
-//
-//    FormatBuffer<> gc_string("%s", "Pause ");
-//    if (do_young_collection) {
-//      gc_string.append("Young");
-//    } else {
-//      gc_string.append("Full");
-//    }
-//
-//    GCTraceCPUTime tcpu;
-//    GCTraceTime(Info, gc) t(gc_string, NULL, gc_cause(), true);
-//
-//    gc_prologue(complete);
-//    increment_total_collections(complete);
-//
-//    size_t young_prev_used = _young_gen->used();
-//    size_t old_prev_used = _old_gen->used();
-//    const metaspace::MetaspaceSizesSnapshot prev_meta_sizes;
-//
-//    bool run_verification = total_collections() >= VerifyGCStartAt;
-//
-//    bool prepared_for_verification = false;
-//    bool collected_old = false;
-//
-//    if (do_young_collection) {
-//      if (run_verification && VerifyGCLevel <= 0 && VerifyBeforeGC) {
-//        prepare_for_verify();
-//        prepared_for_verification = true;
-//      }
-//
-//      collect_generation(_young_gen,
-//                         full,
-//                         size,
-//                         is_tlab,
-//                         run_verification && VerifyGCLevel <= 0,
-//                         do_clear_all_soft_refs,
-//                         false);
-//
-//      if (size > 0 && (!is_tlab || _young_gen->supports_tlab_allocation()) &&
-//          size * HeapWordSize <= _young_gen->unsafe_max_alloc_nogc()) {
-//        // Allocation request was met by young GC.
-//        size = 0;
-//      }
-//    }
-//
-//    bool must_restore_marks_for_biased_locking = false;
-//
-//    if (max_generation == OldGen && _old_gen->should_collect(full, size, is_tlab)) {
-//      if (!complete) {
-//        // The full_collections increment was missed above.
-//        increment_total_full_collections();
-//      }
-//
-//      if (!prepared_for_verification && run_verification &&
-//          VerifyGCLevel <= 1 && VerifyBeforeGC) {
-//        prepare_for_verify();
-//      }
-//
-//      if (do_young_collection) {
-//        // We did a young GC. Need a new GC id for the old GC.
-//        GCIdMark gc_id_mark;
-//        GCTraceTime(Info, gc) t("Pause Full", NULL, gc_cause(), true);
-//        collect_generation(_old_gen, full, size, is_tlab, run_verification && VerifyGCLevel <= 1, do_clear_all_soft_refs, true);
-//      } else {
-//        // No young GC done. Use the same GC id as was set up earlier in this method.
-//        collect_generation(_old_gen, full, size, is_tlab, run_verification && VerifyGCLevel <= 1, do_clear_all_soft_refs, true);
-//      }
-//
-//      must_restore_marks_for_biased_locking = true;
-//      collected_old = true;
-//    }
-//
-//    // Update "complete" boolean wrt what actually transpired --
-//    // for instance, a promotion failure could have led to
-//    // a whole heap collection.
-//    complete = complete || collected_old;
-//
-//    print_heap_change(young_prev_used, old_prev_used);
-//    MetaspaceUtils::print_metaspace_change(prev_meta_sizes);
-//
-//    // Adjust generation sizes.
-//    if (collected_old) {
-//      _old_gen->compute_new_size();
-//    }
-//    _young_gen->compute_new_size();
-//
-//    if (complete) {
-//      // Delete metaspaces for unloaded class loaders and clean up loader_data graph
-//      ClassLoaderDataGraph::purge();
-//      MetaspaceUtils::verify_metrics();
-//      // Resize the metaspace capacity after full collections
-//      MetaspaceGC::compute_new_size();
-//      update_full_collections_completed();
-//    }
-//
-//    // Track memory usage and detect low memory after GC finishes
-//    MemoryService::track_memory_usage();
-//
-//    gc_epilogue(complete);
-//
-//    if (must_restore_marks_for_biased_locking) {
-//      BiasedLocking::restore_marks();
-//    }
-//  }
-//
-//  print_heap_after_gc();
-//
-//#ifdef TRACESPINNING
-//  ParallelTaskTerminator::print_termination_counts();
-//#endif
-//}
-
-
 void GenCollectedHeap::do_collection(bool           full,
-                                     bool           clear_all_soft_refs,
-                                     size_t         size,
-                                     bool           is_tlab,
-                                     GenerationType max_generation) {
-  if (GCLocker::check_active_before_gc()) {
-    return; // GC is disabled (e.g. JNI GetXXXCritical operation)
-  }
+                                    bool           clear_all_soft_refs,
+                                    size_t         size,
+                                    bool           is_tlab,
+                                    GenerationType max_generation) {
+ ResourceMark rm;
+ DEBUG_ONLY(Thread* my_thread = Thread::current();)
 
-  assert(Thread::current()->is_VM_thread(), "Should be VM thread");
-  assert(GCLockerInvokesConcurrent || ExplicitGCInvokesConcurrent, "Unexpected");
+ assert(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
+ assert(my_thread->is_VM_thread() ||
+        my_thread->is_ConcurrentGC_thread(),
+        "incorrect thread type capability");
+ assert(Heap_lock->is_locked(),
+        "the requesting thread should have the Heap_lock");
+ guarantee(!is_gc_active(), "collection is not reentrant");
 
-//  if (_gc_count_before == heap->total_collections()) {
-//    // The "full" of do_full_collection call below "forces"
-//    // a collection; the second arg, 0, below ensures that
-//    // only the young gen is collected. XXX In the future,
-//    // we'll probably need to have something in this interface
-//    // to say do this only if we are sure we will not bail
-//    // out to a full collection in this attempt, but that's
-//    // for the future.
-//    assert(SafepointSynchronize::is_at_safepoint(),
-//           "We can only be executing this arm of if at a safepoint");
-//    GCCauseSetter gccs(heap, _gc_cause);
-//    heap->do_full_collection(heap->must_clear_all_soft_refs(), GenCollectedHeap::YoungGen);
-//  } // Else no need for a foreground young gc
+ if (GCLocker::check_active_before_gc()) {
+   return; // GC is disabled (e.g. JNI GetXXXCritical operation)
+ }
 
-//  assert((_gc_count_before < heap->total_collections()) ||
-//         (GCLocker::is_active() /* gc may have been skipped */
-//          && (_gc_count_before == heap->total_collections())),
-//         "total_collections() should be monotonically increasing");
-  uint _full_gc_count_before = 0;
-  {
-    MutexLockerEx x(FullGCCount_lock, Mutex::_no_safepoint_check_flag);
-    _full_gc_count_before = total_full_collections();
-  }
+ GCIdMark gc_id_mark;
 
-  CMSCollector::request_full_gc( _full_gc_count_before, gc_cause());
+ const bool do_clear_all_soft_refs = clear_all_soft_refs ||
+                                     soft_ref_policy()->should_clear_all_soft_refs();
 
-  {
-    MutexLockerEx x(FullGCCount_lock, Mutex::_no_safepoint_check_flag);
-    // Either a concurrent or a stop-world full gc is sufficient
-    // witness to our request.
-    CMSHeap* heap = CMSHeap::heap();
-    assert(heap == this, "Wrong heap");
-    while (heap->total_full_collections_completed() <= _full_gc_count_before) {
-      FullGCCount_lock->wait(Mutex::_no_safepoint_check_flag);
-    }
-  }
+ ClearedAllSoftRefs casr(do_clear_all_soft_refs, soft_ref_policy());
 
+ print_heap_before_gc();
+
+ {
+   FlagSetting fl(_is_gc_active, true);
+
+   bool complete = full && (max_generation == OldGen);
+   bool old_collects_young = complete && !ScavengeBeforeFullGC;
+   bool do_young_collection = !old_collects_young && _young_gen->should_collect(full, size, is_tlab);
+
+   FormatBuffer<> gc_string("%s", "Pause ");
+   if (do_young_collection) {
+     gc_string.append("Young");
+   } else {
+     gc_string.append("Full");
+   }
+
+   GCTraceCPUTime tcpu;
+   GCTraceTime(Info, gc) t(gc_string, NULL, gc_cause(), true);
+
+   gc_prologue(complete);
+   increment_total_collections(complete);
+
+   size_t young_prev_used = _young_gen->used();
+   size_t old_prev_used = _old_gen->used();
+   const metaspace::MetaspaceSizesSnapshot prev_meta_sizes;
+
+   bool run_verification = total_collections() >= VerifyGCStartAt;
+
+   bool prepared_for_verification = false;
+   bool collected_old = false;
+
+   if (do_young_collection) {
+     if (run_verification && VerifyGCLevel <= 0 && VerifyBeforeGC) {
+       prepare_for_verify();
+       prepared_for_verification = true;
+     }
+
+     collect_generation(_young_gen,
+                        full,
+                        size,
+                        is_tlab,
+                        run_verification && VerifyGCLevel <= 0,
+                        do_clear_all_soft_refs,
+                        false);
+
+     if (size > 0 && (!is_tlab || _young_gen->supports_tlab_allocation()) &&
+         size * HeapWordSize <= _young_gen->unsafe_max_alloc_nogc()) {
+       // Allocation request was met by young GC.
+       size = 0;
+     }
+   }
+
+   bool must_restore_marks_for_biased_locking = false;
+
+   if (max_generation == OldGen && _old_gen->should_collect(full, size, is_tlab)) {
+     if (!complete) {
+       // The full_collections increment was missed above.
+       increment_total_full_collections();
+     }
+
+     if (!prepared_for_verification && run_verification &&
+         VerifyGCLevel <= 1 && VerifyBeforeGC) {
+       prepare_for_verify();
+     }
+
+     if (do_young_collection) {
+       // We did a young GC. Need a new GC id for the old GC.
+       GCIdMark gc_id_mark;
+       GCTraceTime(Info, gc) t("Pause Full", NULL, gc_cause(), true);
+       collect_generation(_old_gen, full, size, is_tlab, run_verification && VerifyGCLevel <= 1, do_clear_all_soft_refs, true);
+     } else {
+       // No young GC done. Use the same GC id as was set up earlier in this method.
+       collect_generation(_old_gen, full, size, is_tlab, run_verification && VerifyGCLevel <= 1, do_clear_all_soft_refs, true);
+     }
+
+     must_restore_marks_for_biased_locking = true;
+     collected_old = true;
+   }
+
+   // Update "complete" boolean wrt what actually transpired --
+   // for instance, a promotion failure could have led to
+   // a whole heap collection.
+   complete = complete || collected_old;
+
+   print_heap_change(young_prev_used, old_prev_used);
+   MetaspaceUtils::print_metaspace_change(prev_meta_sizes);
+
+   // Adjust generation sizes.
+   if (collected_old) {
+     _old_gen->compute_new_size();
+   }
+   _young_gen->compute_new_size();
+
+   if (complete) {
+     // Delete metaspaces for unloaded class loaders and clean up loader_data graph
+     ClassLoaderDataGraph::purge();
+     MetaspaceUtils::verify_metrics();
+     // Resize the metaspace capacity after full collections
+     MetaspaceGC::compute_new_size();
+     update_full_collections_completed();
+   }
+
+   // Track memory usage and detect low memory after GC finishes
+   MemoryService::track_memory_usage();
+
+   gc_epilogue(complete);
+
+   if (must_restore_marks_for_biased_locking) {
+     BiasedLocking::restore_marks();
+   }
+ }
+
+ print_heap_after_gc();
+
+#ifdef TRACESPINNING
+ ParallelTaskTerminator::print_termination_counts();
+#endif
+}
+
+
+
+void GenCollectedHeap::wait_for_background(uint _full_gc_count_before){
+  return;
 }
 
 void GenCollectedHeap::register_nmethod(nmethod* nm) {
