@@ -1411,6 +1411,31 @@ void CMSCollector::acquire_control_and_collect(bool full,
   assert(!Thread::current()->is_ConcurrentGC_thread(),
          "shouldn't try to acquire control from self!");
 
+  log_info(gc)("acquire control");
+  if (Heap_lock->owner()->is_Java_thread()){
+    log_info(gc)("is java thread");
+  }
+  if (Heap_lock->owner()->is_VM_thread()){
+    log_info(gc)("is vm thread");
+  }
+  if (Heap_lock->owner()->is_GC_task_thread()){
+    log_info(gc)("is gc task thread");
+  }
+  if (Heap_lock->owner()->is_ConcurrentGC_thread()){
+    log_info(gc)("is gc task thread");
+  }
+  if (Heap_lock->owner()->is_Named_thread()){
+    log_info(gc)("is named thread");
+  }
+  if (Heap_lock->owner()->is_Worker_thread()){
+    log_info(gc)("is worker thread");
+  }
+  log_info(gc)("acquire control log end");
+  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
+  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
+  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
+  assert(Heap_lock->owned_by_self(), "Locking discipline.");
+
   // Start the protocol for acquiring control of the
   // collection from the background collector (aka CMS thread).
 //  assert(ConcurrentMarkSweepThread::vm_thread_has_cms_token(),
@@ -1587,8 +1612,13 @@ void CMSCollector::do_compaction_work(bool clear_all_soft_refs) {
                                             _intra_sweep_estimate.padded_average());
   }
 
-  collect_in_background(heap->gc_cause());
-//  GenMarkSweep::invoke_at_safepoint(ref_processor(), clear_all_soft_refs);
+  {
+    MutexUnlockerEx mu(Heap_lock, false);
+    collect_in_background(heap->gc_cause());
+    //  GenMarkSweep::invoke_at_safepoint(ref_processor(), clear_all_soft_refs);
+  }
+  
+
   #ifdef ASSERT
     CompactibleFreeListSpace* cms_space = _cmsGen->cmsSpace();
     size_t free_size = cms_space->free();
@@ -1717,6 +1747,28 @@ class ReleaseForegroundGC: public StackObj {
 };
 
 void CMSCollector::collect_in_background(GCCause::Cause cause) {
+  if (Heap_lock->owner()->is_Java_thread()){
+    log_info(gc)("is java thread");
+  }
+  if (Heap_lock->owner()->is_VM_thread()){
+    log_info(gc)("is vm thread");
+  }
+  if (Heap_lock->owner()->is_GC_task_thread()){
+    log_info(gc)("is gc task thread");
+  }
+  if (Heap_lock->owner()->is_ConcurrentGC_thread()){
+    log_info(gc)("is gc task thread");
+  }
+  if (Heap_lock->owner()->is_Named_thread()){
+    log_info(gc)("is named thread");
+  }
+  if (Heap_lock->owner()->is_Worker_thread()){
+    log_info(gc)("is worker thread");
+  }
+  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
+  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
+  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
+  assert(Heap_lock->owned_by_self(), "Locking discipline.");
   assert(Thread::current()->is_VM_thread(),
     "hua: A modified collection is only allowed on a VM thread.");
 

@@ -973,6 +973,31 @@ void GenCollectedHeap::collect_locked(GCCause::Cause cause) {
 // The Heap_lock is expected to be held on entry.
 
 void GenCollectedHeap::collect_locked(GCCause::Cause cause, GenerationType max_generation) {
+
+
+  log_info(gc)("collect_locked");
+  if (Heap_lock->owner()->is_Java_thread()){
+    log_info(gc)("is java thread");
+  }
+  if (Heap_lock->owner()->is_VM_thread()){
+    log_info(gc)("is vm thread");
+  }
+  if (Heap_lock->owner()->is_GC_task_thread()){
+    log_info(gc)("is gc task thread");
+  }
+  if (Heap_lock->owner()->is_ConcurrentGC_thread()){
+    log_info(gc)("is gc task thread");
+  }
+  if (Heap_lock->owner()->is_Named_thread()){
+    log_info(gc)("is named thread");
+  }
+  if (Heap_lock->owner()->is_Worker_thread()){
+    log_info(gc)("is worker thread");
+  }
+  log_info(gc)("collect_locked end");
+  assert(Heap_lock->owned_by_self(), "Locking discipline.");
+
+
   // Read the GC count while holding the Heap_lock
   unsigned int gc_count_before      = total_collections();
   unsigned int full_gc_count_before = total_full_collections();

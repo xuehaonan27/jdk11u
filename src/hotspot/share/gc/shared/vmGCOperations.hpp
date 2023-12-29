@@ -203,6 +203,10 @@ class VM_GenCollectFull: public VM_GC_Operation {
   ~VM_GenCollectFull() {}
   virtual VMOp_Type type() const { return VMOp_GenCollectFull; }
   virtual void doit();
+  // // Acquire the reference synchronization lock
+  // virtual bool doit_prologue();
+  // // Do notifyAll (if needed) and release held lock
+  // virtual void doit_epilogue();
 };
 
 class VM_CollectForMetadataAllocation: public VM_GC_Operation {

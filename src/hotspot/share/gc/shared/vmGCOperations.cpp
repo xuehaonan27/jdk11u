@@ -35,6 +35,7 @@
 #include "memory/oopFactory.hpp"
 #include "runtime/handles.inline.hpp"
 #include "runtime/init.hpp"
+#include "runtime/mutexLocker.hpp"
 #include "utilities/dtrace.hpp"
 #include "utilities/macros.hpp"
 #include "utilities/preserveException.hpp"
@@ -172,12 +173,54 @@ void VM_GenCollectForAllocation::doit() {
 }
 
 void VM_GenCollectFull::doit() {
+  MutexLockerEx ml(Heap_lock, false);
   SvcGCMarker sgcm(SvcGCMarker::FULL);
 
   GenCollectedHeap* gch = GenCollectedHeap::heap();
   GCCauseSetter gccs(gch, _gc_cause);
   gch->do_full_collection(gch->must_clear_all_soft_refs(), _max_generation);
 }
+
+// bool VM_GenCollectFull::doit_prologue() {
+//   assert(Thread::current()->is_Java_thread(), "just checking");
+//   assert(((_gc_cause != GCCause::_no_gc) &&
+//           (_gc_cause != GCCause::_no_cause_specified)), "Illegal GCCause");
+
+//   // To be able to handle a GC the VM initialization needs to be completed.
+//   if (!is_init_completed()) {
+//     vm_exit_during_initialization(
+//       err_msg("GC triggered before VM initialization completed. Try increasing "
+//               "NewSize, current value " SIZE_FORMAT "%s.",
+//               byte_size_in_proper_unit(NewSize),
+//               proper_unit_for_byte_size(NewSize)));
+//   }
+
+//   // If the GC count has changed someone beat us to the collection
+//   Heap_lock->lock();
+
+//   // Check invocations
+//   if (skip_operation()) {
+//     // skip collection
+//     _prologue_succeeded = false;
+//   } else {
+//     _prologue_succeeded = true;
+//   }
+//   Heap_lock->unlock();
+//   return _prologue_succeeded;
+// }
+
+
+// void VM_GenCollectFull::doit_epilogue() {
+//   assert(Thread::current()->is_Java_thread(), "just checking");
+//   // Clean up old interpreter OopMap entries that were replaced
+//   // during the GC thread root traversal.
+//   Heap_lock->lock();
+//   OopMapCache::cleanup_old_entries();
+//   if (Universe::has_reference_pending_list()) {
+//     Heap_lock->notify_all();
+//   }
+//   Heap_lock->unlock();
+// }
 
 VM_CollectForMetadataAllocation::VM_CollectForMetadataAllocation(ClassLoaderData* loader_data,
                                                                  size_t size,
