@@ -75,7 +75,7 @@ void CMSHeap::do_collection(bool           full,
   }
 
   CMSCollector::request_full_gc( _full_gc_count_before, gc_cause());
-  fb.notify();
+  FgBgSync_lock.notify();
 
   wait_for_background(_full_gc_count_before);
 

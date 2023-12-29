@@ -301,7 +301,7 @@ void ConcurrentMarkSweepThread::wait_on_cms_lock_for_scavenge(long t_millis) {
 void ConcurrentMarkSweepThread::sleepBeforeNextCycle() {
   MutexLockerEx fb(FgBgSync_lock, Mutex::_no_safepoint_check_flag);
   while(!_collector->shouldConcurrentCollect() && !should_terminate()){
-    fb.wait(Mutex::_no_safepoint_check_flag);
+    FgBgSync_lock.wait(Mutex::_no_safepoint_check_flag);
   }
 //  while (!should_terminate()) {
 
