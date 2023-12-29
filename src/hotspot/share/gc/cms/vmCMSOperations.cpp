@@ -79,10 +79,10 @@ bool VM_CMS_Operation::doit_prologue() {
 //  assert(!ConcurrentMarkSweepThread::cms_thread_has_cms_token(),
 //         "Possible deadlock");
 
-  Heap_lock->lock();
+//  Heap_lock->lock();
   if (lost_race()) {
     assert(_prologue_succeeded == false, "Initialized in c'tor");
-    Heap_lock->unlock();
+//    Heap_lock->unlock();
   } else {
     _prologue_succeeded = true;
   }
@@ -96,9 +96,9 @@ void VM_CMS_Operation::doit_epilogue() {
 //         "Possible deadlock");
 
   if (Universe::has_reference_pending_list()) {
-    Heap_lock->notify_all();
+//    Heap_lock->notify_all();
   }
-  Heap_lock->unlock();
+//  Heap_lock->unlock();
 }
 
 //////////////////////////////////////////////////////////
@@ -189,26 +189,28 @@ void VM_GenCollectFullConcurrent::doit() {
     // Nudge the CMS thread to start a concurrent collection.
     CMSCollector::request_full_gc(_full_gc_count_before, _gc_cause);
   } else {
+    assert(false, "Should not reach here");
     assert(_full_gc_count_before < heap->total_full_collections(), "Error");
     FullGCCount_lock->notify_all();  // Inform the Java thread its work is done
   }
 }
 
 bool VM_GenCollectFullConcurrent::evaluate_at_safepoint() const {
-  Thread* thr = Thread::current();
-  assert(thr != NULL, "Unexpected tid");
-  if (!thr->is_Java_thread()) {
-    assert(thr->is_VM_thread(), "Expected to be evaluated by VM thread");
-    CMSHeap* heap = CMSHeap::heap();
-    if (_gc_count_before != heap->total_collections()) {
-      // No need to do a young gc, we'll just nudge the CMS thread
-      // in the doit() method above, to be executed soon.
-      assert(_gc_count_before < heap->total_collections(),
-             "total_collections() should be monotonically increasing");
-      return false;  // no need for foreground young gc
-    }
-  }
-  return true;       // may still need foreground young gc
+  return true;
+//  Thread* thr = Thread::current();
+//  assert(thr != NULL, "Unexpected tid");
+//  if (!thr->is_Java_thread()) {
+//    assert(thr->is_VM_thread(), "Expected to be evaluated by VM thread");
+//    CMSHeap* heap = CMSHeap::heap();
+//    if (_gc_count_before != heap->total_collections()) {
+//      // No need to do a young gc, we'll just nudge the CMS thread
+//      // in the doit() method above, to be executed soon.
+//      assert(_gc_count_before < heap->total_collections(),
+//             "total_collections() should be monotonically increasing");
+//      return false;  // no need for foreground young gc
+//    }
+//  }
+//  return true;       // may still need foreground young gc
 }
 
 

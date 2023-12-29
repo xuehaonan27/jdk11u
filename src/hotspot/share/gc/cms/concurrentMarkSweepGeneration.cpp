@@ -1138,95 +1138,97 @@ bool CMSCollector::shouldConcurrentCollect() {
     return true;
   }
 
-  FreelistLocker x(this);
-  // ------------------------------------------------------------------
-  // Print out lots of information which affects the initiation of
-  // a collection.
-  if (log.is_enabled() && stats().valid()) {
-    log.print("CMSCollector shouldConcurrentCollect: ");
-
-    LogStream out(log);
-    stats().print_on(&out);
-
-    log.print("time_until_cms_gen_full %3.7f", stats().time_until_cms_gen_full());
-    log.print("free=" SIZE_FORMAT, _cmsGen->free());
-    log.print("contiguous_available=" SIZE_FORMAT, _cmsGen->contiguous_available());
-    log.print("promotion_rate=%g", stats().promotion_rate());
-    log.print("cms_allocation_rate=%g", stats().cms_allocation_rate());
-    log.print("occupancy=%3.7f", _cmsGen->occupancy());
-    log.print("initiatingOccupancy=%3.7f", _cmsGen->initiating_occupancy());
-    log.print("cms_time_since_begin=%3.7f", stats().cms_time_since_begin());
-    log.print("cms_time_since_end=%3.7f", stats().cms_time_since_end());
-    log.print("metadata initialized %d", MetaspaceGC::should_concurrent_collect());
-  }
-  // ------------------------------------------------------------------
-
-  // If the estimated time to complete a cms collection (cms_duration())
-  // is less than the estimated time remaining until the cms generation
-  // is full, start a collection.
-  if (!UseCMSInitiatingOccupancyOnly) {
-    if (stats().valid()) {
-      if (stats().time_until_cms_start() == 0.0) {
-        return true;
-      }
-    } else {
-      // We want to conservatively collect somewhat early in order
-      // to try and "bootstrap" our CMS/promotion statistics;
-      // this branch will not fire after the first successful CMS
-      // collection because the stats should then be valid.
-      if (_cmsGen->occupancy() >= _bootstrap_occupancy) {
-        log.print(" CMSCollector: collect for bootstrapping statistics: occupancy = %f, boot occupancy = %f",
-                  _cmsGen->occupancy(), _bootstrap_occupancy);
-        return true;
-      }
-    }
-  }
-
-  // Otherwise, we start a collection cycle if
-  // old gen want a collection cycle started. Each may use
-  // an appropriate criterion for making this decision.
-  // XXX We need to make sure that the gen expansion
-  // criterion dovetails well with this. XXX NEED TO FIX THIS
-  if (_cmsGen->should_concurrent_collect()) {
-    log.print("CMS old gen initiated");
-    return true;
-  }
-
-  // We start a collection if we believe an incremental collection may fail;
-  // this is not likely to be productive in practice because it's probably too
-  // late anyway.
-  CMSHeap* heap = CMSHeap::heap();
-  if (heap->incremental_collection_will_fail(true /* consult_young */)) { //hua: always return false for CMS?
-    log.print("CMSCollector: collect because incremental collection will fail ");
-    return true;
-  }
-
-  if (MetaspaceGC::should_concurrent_collect()) {
-    log.print("CMSCollector: collect for metadata allocation ");
-    return true;
-  }
-
-  // CMSTriggerInterval starts a CMS cycle if enough time has passed.
-  if (CMSTriggerInterval >= 0) {
-    if (CMSTriggerInterval == 0) {
-      // Trigger always
-      return true;
-    }
-
-    // Check the CMS time since begin (we do not check the stats validity
-    // as we want to be able to trigger the first CMS cycle as well)
-    if (stats().cms_time_since_begin() >= (CMSTriggerInterval / ((double) MILLIUNITS))) {
-      if (stats().valid()) {
-        log.print("CMSCollector: collect because of trigger interval (time since last begin %3.7f secs)",
-                  stats().cms_time_since_begin());
-      } else {
-        log.print("CMSCollector: collect because of trigger interval (first collection)");
-      }
-      return true;
-    }
-  }
-
   return false;
+
+//  FreelistLocker x(this);
+//  // ------------------------------------------------------------------
+//  // Print out lots of information which affects the initiation of
+//  // a collection.
+//  if (log.is_enabled() && stats().valid()) {
+//    log.print("CMSCollector shouldConcurrentCollect: ");
+//
+//    LogStream out(log);
+//    stats().print_on(&out);
+//
+//    log.print("time_until_cms_gen_full %3.7f", stats().time_until_cms_gen_full());
+//    log.print("free=" SIZE_FORMAT, _cmsGen->free());
+//    log.print("contiguous_available=" SIZE_FORMAT, _cmsGen->contiguous_available());
+//    log.print("promotion_rate=%g", stats().promotion_rate());
+//    log.print("cms_allocation_rate=%g", stats().cms_allocation_rate());
+//    log.print("occupancy=%3.7f", _cmsGen->occupancy());
+//    log.print("initiatingOccupancy=%3.7f", _cmsGen->initiating_occupancy());
+//    log.print("cms_time_since_begin=%3.7f", stats().cms_time_since_begin());
+//    log.print("cms_time_since_end=%3.7f", stats().cms_time_since_end());
+//    log.print("metadata initialized %d", MetaspaceGC::should_concurrent_collect());
+//  }
+//  // ------------------------------------------------------------------
+//
+//  // If the estimated time to complete a cms collection (cms_duration())
+//  // is less than the estimated time remaining until the cms generation
+//  // is full, start a collection.
+//  if (!UseCMSInitiatingOccupancyOnly) {
+//    if (stats().valid()) {
+//      if (stats().time_until_cms_start() == 0.0) {
+//        return true;
+//      }
+//    } else {
+//      // We want to conservatively collect somewhat early in order
+//      // to try and "bootstrap" our CMS/promotion statistics;
+//      // this branch will not fire after the first successful CMS
+//      // collection because the stats should then be valid.
+//      if (_cmsGen->occupancy() >= _bootstrap_occupancy) {
+//        log.print(" CMSCollector: collect for bootstrapping statistics: occupancy = %f, boot occupancy = %f",
+//                  _cmsGen->occupancy(), _bootstrap_occupancy);
+//        return true;
+//      }
+//    }
+//  }
+//
+//  // Otherwise, we start a collection cycle if
+//  // old gen want a collection cycle started. Each may use
+//  // an appropriate criterion for making this decision.
+//  // XXX We need to make sure that the gen expansion
+//  // criterion dovetails well with this. XXX NEED TO FIX THIS
+//  if (_cmsGen->should_concurrent_collect()) {
+//    log.print("CMS old gen initiated");
+//    return true;
+//  }
+//
+//  // We start a collection if we believe an incremental collection may fail;
+//  // this is not likely to be productive in practice because it's probably too
+//  // late anyway.
+//  CMSHeap* heap = CMSHeap::heap();
+//  if (heap->incremental_collection_will_fail(true /* consult_young */)) { //hua: always return false for CMS?
+//    log.print("CMSCollector: collect because incremental collection will fail ");
+//    return true;
+//  }
+//
+//  if (MetaspaceGC::should_concurrent_collect()) {
+//    log.print("CMSCollector: collect for metadata allocation ");
+//    return true;
+//  }
+//
+//  // CMSTriggerInterval starts a CMS cycle if enough time has passed.
+//  if (CMSTriggerInterval >= 0) {
+//    if (CMSTriggerInterval == 0) {
+//      // Trigger always
+//      return true;
+//    }
+//
+//    // Check the CMS time since begin (we do not check the stats validity
+//    // as we want to be able to trigger the first CMS cycle as well)
+//    if (stats().cms_time_since_begin() >= (CMSTriggerInterval / ((double) MILLIUNITS))) {
+//      if (stats().valid()) {
+//        log.print("CMSCollector: collect because of trigger interval (time since last begin %3.7f secs)",
+//                  stats().cms_time_since_begin());
+//      } else {
+//        log.print("CMSCollector: collect because of trigger interval (first collection)");
+//      }
+//      return true;
+//    }
+//  }
+//
+//  return false;
 }
 
 void CMSCollector::set_did_compact(bool v) { _cmsGen->set_did_compact(v); }
@@ -1609,9 +1611,9 @@ void CMSCollector::do_compaction_work(bool clear_all_soft_refs) {
   }
 
   {
-    MutexUnlockerEx mu(Heap_lock, false);
-    collect_in_background(heap->gc_cause());
-    //  GenMarkSweep::invoke_at_safepoint(ref_processor(), clear_all_soft_refs);
+//    MutexUnlockerEx mu(Heap_lock, false);
+//    collect_in_background(heap->gc_cause());
+      GenMarkSweep::invoke_at_safepoint(ref_processor(), clear_all_soft_refs);
   }
   
 
@@ -1764,14 +1766,14 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
   // log_info(gc)("owner: %s", Heap_lock->owner()->name());
   // log_info(gc)("owner: %s", Heap_lock->owner()->name());
   // log_info(gc)("owner: %s", Heap_lock->owner()->name());
-  assert(Heap_lock->owned_by_self(), "Locking discipline.");
-  assert(Thread::current()->is_VM_thread(),
-    "hua: A modified collection is only allowed on a VM thread.");
+//  assert(Heap_lock->owned_by_self(), "Locking discipline.");
+//  assert(Thread::current()->is_VM_thread(),
+//    "hua: A modified collection is only allowed on a VM thread.");
 
   CMSHeap* heap = CMSHeap::heap();
   {
     bool safepoint_check = Mutex::_no_safepoint_check_flag;
-    MutexLockerEx hl(Heap_lock, safepoint_check);
+//    MutexLockerEx hl(Heap_lock, safepoint_check);
     FreelistLocker fll(this);
     MutexLockerEx x(CGC_lock, safepoint_check);
 //    if (_foregroundGCIsActive) {
@@ -1866,10 +1868,13 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
     switch (_collectorState) {
       case InitialMarking:
         {
-          ReleaseForegroundGC x(this);
+//          ReleaseForegroundGC x(this);
           stats().record_cms_begin();
           VM_CMS_Initial_Mark initial_mark_op(this);
-          VMThread::execute(&initial_mark_op);
+//          VMThread::execute(&initial_mark_op);
+          initial_mark_op->doit_prologue();
+          initial_mark_op->doit();
+          initial_mark_op->doit_epilogue();
         }
         // The collector state may be any legal state at this point
         // since the background collector may have yielded to the
@@ -1898,10 +1903,13 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
         break;
       case FinalMarking:
         {
-          ReleaseForegroundGC x(this);
+//          ReleaseForegroundGC x(this);
 
           VM_CMS_Final_Remark final_remark_op(this);
-          VMThread::execute(&final_remark_op);
+          final_remark_op->doit_prologue();
+          final_remark_op->doit();
+          final_remark_op->doit_epilogue();
+//          VMThread::execute(&final_remark_op);
         }
 //        assert(_foregroundGCShouldWait, "block post-condition");
         break;
@@ -5423,7 +5431,8 @@ void CMSCollector::sweep() {
   // attempted.
   CMSHeap* heap = CMSHeap::heap();
   heap->clear_incremental_collection_failed();  // Worth retrying as fresh space may have been freed up
-  heap->update_full_collections_completed(_collection_count_start);
+//  heap->update_full_collections_completed(_collection_count_start);
+  heap->update_full_collections_completed();
 }
 
 // FIX ME!!! Looks like this belongs in CFLSpace, with
