@@ -66,6 +66,8 @@ void CMSHeap::do_collection(bool           full,
 //         (GCLocker::is_active() /* gc may have been skipped */
 //          && (_gc_count_before == heap->total_collections())),
 //         "total_collections() should be monotonically increasing");
+
+  MutexLockerEx fb(FgBgSync_lock, Mutex::_no_safepoint_check_flag);
   uint _full_gc_count_before = 0;
   {
     MutexLockerEx x(FullGCCount_lock, Mutex::_no_safepoint_check_flag);
@@ -73,6 +75,7 @@ void CMSHeap::do_collection(bool           full,
   }
 
   CMSCollector::request_full_gc( _full_gc_count_before, gc_cause());
+  fb.notify();
 
   wait_for_background(_full_gc_count_before);
 

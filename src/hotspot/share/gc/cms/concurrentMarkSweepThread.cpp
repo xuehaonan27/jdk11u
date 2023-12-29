@@ -299,20 +299,25 @@ void ConcurrentMarkSweepThread::wait_on_cms_lock_for_scavenge(long t_millis) {
 }
 
 void ConcurrentMarkSweepThread::sleepBeforeNextCycle() {
-  while (!should_terminate()) {
-    if(CMSWaitDuration >= 0) {
-      // Wait until the next synchronous GC, a concurrent full gc
-      // request or a timeout, whichever is earlier.
-      wait_on_cms_lock_for_scavenge(CMSWaitDuration);
-    } else {
-      // Wait until any cms_lock event or check interval not to call shouldConcurrentCollect permanently
-      wait_on_cms_lock(CMSCheckInterval);
-    }
-    // Check if we should start a CMS collection cycle
-    if (_collector->shouldConcurrentCollect()) {
-      return;
-    }
-    // .. collection criterion not yet met, let's go back
-    // and wait some more
+  MutexLockerEx fb(FgBgSync_lock, Mutex::_no_safepoint_check_flag);
+  while(!_collector->shouldConcurrentCollect() && !should_terminate()){
+    fb.wait(Mutex::_no_safepoint_check_flag);
   }
+//  while (!should_terminate()) {
+
+//    if(CMSWaitDuration >= 0) {
+//      // Wait until the next synchronous GC, a concurrent full gc
+//      // request or a timeout, whichever is earlier.
+//      wait_on_cms_lock_for_scavenge(CMSWaitDuration);
+//    } else {
+//      // Wait until any cms_lock event or check interval not to call shouldConcurrentCollect permanently
+//      wait_on_cms_lock(CMSCheckInterval);
+//    }
+//    // Check if we should start a CMS collection cycle
+//    if (_collector->shouldConcurrentCollect()) {
+//      return;
+//    }
+//    // .. collection criterion not yet met, let's go back
+//    // and wait some more
+//  }
 }

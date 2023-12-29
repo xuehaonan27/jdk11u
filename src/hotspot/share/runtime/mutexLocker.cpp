@@ -205,6 +205,7 @@ void mutex_init() {
 
   if (UseConcMarkSweepGC || UseG1GC) {
     def(FullGCCount_lock           , PaddedMonitor, leaf,        true,  Monitor::_safepoint_check_never);      // in support of ExplicitGCInvokesConcurrent
+    def(FgBgSync_lock              , PaddedMonitor, leaf,        true,  Monitor::_safepoint_check_never);
   }
   if (UseG1GC) {
     def(SATB_Q_FL_lock             , PaddedMutex  , access,      true,  Monitor::_safepoint_check_never);
