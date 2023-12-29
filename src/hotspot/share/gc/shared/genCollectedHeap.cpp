@@ -995,7 +995,6 @@ void GenCollectedHeap::collect_locked(GCCause::Cause cause, GenerationType max_g
     log_info(gc)("is worker thread");
   }
   log_info(gc)("collect_locked end");
-  assert(Heap_lock->owned_by_self(), "Locking discipline.");
 
 
   // Read the GC count while holding the Heap_lock

@@ -35,7 +35,6 @@
 #include "memory/oopFactory.hpp"
 #include "runtime/handles.inline.hpp"
 #include "runtime/init.hpp"
-#include "runtime/mutexLocker.hpp"
 #include "utilities/dtrace.hpp"
 #include "utilities/macros.hpp"
 #include "utilities/preserveException.hpp"
@@ -173,7 +172,6 @@ void VM_GenCollectForAllocation::doit() {
 }
 
 void VM_GenCollectFull::doit() {
-  MutexLockerEx ml(Heap_lock, false);
   SvcGCMarker sgcm(SvcGCMarker::FULL);
 
   GenCollectedHeap* gch = GenCollectedHeap::heap();

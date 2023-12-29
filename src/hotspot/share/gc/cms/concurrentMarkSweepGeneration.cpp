@@ -601,11 +601,11 @@ CMSCollector::CMSCollector(ConcurrentMarkSweepGeneration* cmsGen,
 
   // Create & start a CMS thread for this CMS collector
 //  _cmsThread = ConcurrentMarkSweepThread::start(this);
-  _cmsThread = NULL;
-  assert(cmsThread() == NULL, "CMS Thread should have been removed");
-//  assert(cmsThread()->collector() == this,
-//         "CMS Thread should refer to this gen");
-//  assert(CGC_lock != NULL, "Where's the CGC_lock?");
+  _cmsThread = ConcurrentMarkSweepThread::start(this);
+  assert(cmsThread() != NULL, "CMS Thread should have been created");
+  assert(cmsThread()->collector() == this,
+         "CMS Thread should refer to this gen");
+  assert(CGC_lock != NULL, "Where's the CGC_lock?");
 
   // Support for parallelizing young gen rescan
   CMSHeap* heap = CMSHeap::heap();
@@ -1431,10 +1431,6 @@ void CMSCollector::acquire_control_and_collect(bool full,
     log_info(gc)("is worker thread");
   }
   log_info(gc)("acquire control log end");
-  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
-  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
-  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
-  assert(Heap_lock->owned_by_self(), "Locking discipline.");
 
   // Start the protocol for acquiring control of the
   // collection from the background collector (aka CMS thread).

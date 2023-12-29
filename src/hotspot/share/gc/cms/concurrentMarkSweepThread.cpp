@@ -103,9 +103,9 @@ void ConcurrentMarkSweepThread::verify_ok_to_terminate() const {
 // create and start a new ConcurrentMarkSweep Thread for given CMS generation
 ConcurrentMarkSweepThread* ConcurrentMarkSweepThread::start(CMSCollector* collector) {
   guarantee(_cmst == NULL, "start() called twice!");
-//  ConcurrentMarkSweepThread* th = new ConcurrentMarkSweepThread(collector);
-//  assert(_cmst == th, "Where did the just-created CMS thread go?");
-  return NULL;
+  ConcurrentMarkSweepThread* th = new ConcurrentMarkSweepThread(collector);
+  assert(_cmst == th, "Where did the just-created CMS thread go?");
+  return th;
 }
 
 void ConcurrentMarkSweepThread::stop_service() {
