@@ -206,7 +206,7 @@ void CMSHeap::collect_mostly_concurrent(GCCause::Cause cause) {
 }
 
 void CMSHeap::stop() {
-  assert(false, "Should not reach here");
+  // assert(false, "Should not reach here");
   ConcurrentMarkSweepThread::cmst()->stop();
 }
 

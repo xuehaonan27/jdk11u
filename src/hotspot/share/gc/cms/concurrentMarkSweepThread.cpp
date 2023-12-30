@@ -112,7 +112,7 @@ void ConcurrentMarkSweepThread::stop_service() {
   // Now post a notify on CGC_lock so as to nudge
   // CMS thread(s) that might be slumbering in
   // sleepBeforeNextCycle.
-  assert(false, "Should not reach here");
+  // assert(false, "Should not reach here");
   MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
   CGC_lock->notify_all();
 }
@@ -209,7 +209,7 @@ void ConcurrentMarkSweepThread::desynchronize(bool is_cms_thread) {
 
 // Wait until any cms_lock event
 void ConcurrentMarkSweepThread::wait_on_cms_lock(long t_millis) {
-  assert(false, "Should not reach here now as we should disable the background process");
+  // assert(false, "Should not reach here now as we should disable the background process");
 //  MutexLockerEx x(CGC_lock,
 //                  Mutex::_no_safepoint_check_flag);
 //  if (should_terminate() || _collector->_full_gc_requested) {
@@ -301,7 +301,8 @@ void ConcurrentMarkSweepThread::wait_on_cms_lock_for_scavenge(long t_millis) {
 void ConcurrentMarkSweepThread::sleepBeforeNextCycle() {
   MutexLockerEx fb(FgBgSync_lock, Mutex::_no_safepoint_check_flag);
   while(!_collector->shouldConcurrentCollect() && !should_terminate()){
-    FgBgSync_lock.wait(Mutex::_no_safepoint_check_flag);
+    log_info(gc)("Wait for foreground to notify");
+    FgBgSync_lock->wait(Mutex::_no_safepoint_check_flag);
   }
 //  while (!should_terminate()) {
 

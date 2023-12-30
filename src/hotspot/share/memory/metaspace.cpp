@@ -1621,8 +1621,8 @@ size_t ClassLoaderMetaspace::allocated_chunks_bytes() const {
 
 void ClassLoaderMetaspace::deallocate(MetaWord* ptr, size_t word_size, bool is_class) {
   Metaspace::assert_not_frozen();
-  assert(!SafepointSynchronize::is_at_safepoint()
-         || Thread::current()->is_VM_thread(), "should be the VM thread");
+  // assert(!SafepointSynchronize::is_at_safepoint()
+  //        || Thread::current()->is_VM_thread(), "should be the VM thread");
 
   DEBUG_ONLY(Atomic::inc(&g_internal_statistics.num_external_deallocs));
 

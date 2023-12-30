@@ -1135,8 +1135,10 @@ bool CMSCollector::shouldConcurrentCollect() {
 
   if (_full_gc_requested) {
     log.print("CMSCollector: collect because of explicit  gc request (or GCLocker)");
+    log_info(gc)("Full gc requested");
     return true;
   }
+  log_info(gc)("Full gc not requested");
 
   return false;
 

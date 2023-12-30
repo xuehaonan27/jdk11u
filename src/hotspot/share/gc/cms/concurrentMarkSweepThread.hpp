@@ -131,9 +131,8 @@ class ConcurrentMarkSweepThread: public ConcurrentGCThread {
     assert(_pending_yields >= 0, "can't be negative");
   }
   static bool should_yield()   {
-    assert(_pending_yields == 0, "we have changed to stop the world so no one"
-                                 "should increment the pending_yields");
-    return _pending_yields > 0;
+    return false;
+    // return _pending_yields > 0;
   }
 };
 

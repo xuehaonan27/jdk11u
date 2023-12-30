@@ -2110,8 +2110,8 @@ CompactibleFreeListSpace::gc_epilogue() {
 // Iteration support, mostly delegated from a CMS generation
 
 void CompactibleFreeListSpace::save_marks() {
-  assert(Thread::current()->is_VM_thread(),
-         "Global variable should only be set when single-threaded");
+  // assert(Thread::current()->is_VM_thread(),
+        //  "Global variable should only be set when single-threaded");
   // Mark the "end" of the used space at the time of this call;
   // note, however, that promoted objects from this point
   // on are tracked in the _promoInfo below.

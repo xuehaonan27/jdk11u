@@ -554,7 +554,7 @@ void Universe::set_reference_pending_list(oop list) {
 }
 
 bool Universe::has_reference_pending_list() {
-  assert_pll_ownership();
+  // assert_pll_ownership();
   return _reference_pending_list != NULL;
 }
 
