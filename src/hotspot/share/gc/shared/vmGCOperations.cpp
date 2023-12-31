@@ -81,6 +81,7 @@ bool VM_GC_Operation::skip_operation() const {
 }
 
 bool VM_GC_Operation::doit_prologue() {
+  log_info(gc)("VM_GC_Operation::doit_prologue() start");
   assert(Thread::current()->is_Java_thread(), "just checking");
   assert(((_gc_cause != GCCause::_no_gc) &&
           (_gc_cause != GCCause::_no_cause_specified)), "Illegal GCCause");
@@ -105,11 +106,13 @@ bool VM_GC_Operation::doit_prologue() {
   } else {
     _prologue_succeeded = true;
   }
+  log_info(gc)("VM_GC_Operation::doit_prologue() end");
   return _prologue_succeeded;
 }
 
 
 void VM_GC_Operation::doit_epilogue() {
+  log_info(gc)("VM_GC_Operation::doit_epilogue() start");
   assert(Thread::current()->is_Java_thread(), "just checking");
   // Clean up old interpreter OopMap entries that were replaced
   // during the GC thread root traversal.
@@ -118,6 +121,7 @@ void VM_GC_Operation::doit_epilogue() {
     Heap_lock->notify_all();
   }
   Heap_lock->unlock();
+  log_info(gc)("VM_GC_Operation::doit_epilogue() end");
 }
 
 bool VM_GC_HeapInspection::skip_operation() const {
@@ -163,7 +167,9 @@ void VM_GenCollectForAllocation::doit() {
 
   GenCollectedHeap* gch = GenCollectedHeap::heap();
   GCCauseSetter gccs(gch, _gc_cause);
+  log_info(gc)("satisfy_failed_allocation call");
   _result = gch->satisfy_failed_allocation(_word_size, _tlab);
+  log_info(gc)("satisfy_failed_allocation return");
   assert(gch->is_in_reserved_or_null(_result), "result not in heap");
 
   if (_result == NULL && GCLocker::is_active_and_needs_gc()) {
@@ -179,46 +185,48 @@ void VM_GenCollectFull::doit() {
   gch->do_full_collection(gch->must_clear_all_soft_refs(), _max_generation);
 }
 
-// bool VM_GenCollectFull::doit_prologue() {
-//   assert(Thread::current()->is_Java_thread(), "just checking");
-//   assert(((_gc_cause != GCCause::_no_gc) &&
-//           (_gc_cause != GCCause::_no_cause_specified)), "Illegal GCCause");
+bool VM_GenCollectFull::doit_prologue() {
+  assert(Thread::current()->is_Java_thread(), "just checking");
+  assert(((_gc_cause != GCCause::_no_gc) &&
+          (_gc_cause != GCCause::_no_cause_specified)), "Illegal GCCause");
 
-//   // To be able to handle a GC the VM initialization needs to be completed.
-//   if (!is_init_completed()) {
-//     vm_exit_during_initialization(
-//       err_msg("GC triggered before VM initialization completed. Try increasing "
-//               "NewSize, current value " SIZE_FORMAT "%s.",
-//               byte_size_in_proper_unit(NewSize),
-//               proper_unit_for_byte_size(NewSize)));
-//   }
+  // To be able to handle a GC the VM initialization needs to be completed.
+  if (!is_init_completed()) {
+    vm_exit_during_initialization(
+      err_msg("GC triggered before VM initialization completed. Try increasing "
+              "NewSize, current value " SIZE_FORMAT "%s.",
+              byte_size_in_proper_unit(NewSize),
+              proper_unit_for_byte_size(NewSize)));
+  }
 
-//   // If the GC count has changed someone beat us to the collection
-//   Heap_lock->lock();
+  // If the GC count has changed someone beat us to the collection
+  Heap_lock->lock();
 
-//   // Check invocations
-//   if (skip_operation()) {
-//     // skip collection
-//     _prologue_succeeded = false;
-//   } else {
-//     _prologue_succeeded = true;
-//   }
-//   Heap_lock->unlock();
-//   return _prologue_succeeded;
-// }
+  // Check invocations
+  if (skip_operation()) {
+    // skip collection
+    _prologue_succeeded = false;
+  } else {
+    _prologue_succeeded = true;
+  }
+  Heap_lock->unlock();
+  log_info(gc)("VM_GenCollectFull::doit() prologue");
+  return _prologue_succeeded;
+}
 
 
-// void VM_GenCollectFull::doit_epilogue() {
-//   assert(Thread::current()->is_Java_thread(), "just checking");
-//   // Clean up old interpreter OopMap entries that were replaced
-//   // during the GC thread root traversal.
-//   Heap_lock->lock();
-//   OopMapCache::cleanup_old_entries();
-//   if (Universe::has_reference_pending_list()) {
-//     Heap_lock->notify_all();
-//   }
-//   Heap_lock->unlock();
-// }
+void VM_GenCollectFull::doit_epilogue() {
+  assert(Thread::current()->is_Java_thread(), "just checking");
+  // Clean up old interpreter OopMap entries that were replaced
+  // during the GC thread root traversal.
+  Heap_lock->lock();
+  OopMapCache::cleanup_old_entries();
+  if (Universe::has_reference_pending_list()) {
+    Heap_lock->notify_all();
+  }
+  Heap_lock->unlock();
+  log_info(gc)("VM_GenCollectFull::doit() epilogue");
+}
 
 VM_CollectForMetadataAllocation::VM_CollectForMetadataAllocation(ClassLoaderData* loader_data,
                                                                  size_t size,

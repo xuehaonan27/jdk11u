@@ -224,8 +224,11 @@ void CMSHeap::wait_for_background(uint _full_gc_count_before){
   // witness to our request.
   CMSHeap* heap = this;
   while (heap->total_full_collections_completed() <= _full_gc_count_before) {
+    log_info(gc)("completed count still not enough");
     FullGCCount_lock->wait(Mutex::_no_safepoint_check_flag);
+    log_info(gc)("notified by background");
   }
+  log_info(gc)("foreground received background finished");
 }
 
 

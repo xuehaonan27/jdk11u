@@ -1747,24 +1747,24 @@ class ReleaseForegroundGC: public StackObj {
 };
 
 void CMSCollector::collect_in_background(GCCause::Cause cause) {
-  if (Heap_lock->owner()->is_Java_thread()){
-    log_info(gc)("is java thread");
-  }
-  if (Heap_lock->owner()->is_VM_thread()){
-    log_info(gc)("is vm thread");
-  }
-  if (Heap_lock->owner()->is_GC_task_thread()){
-    log_info(gc)("is gc task thread");
-  }
-  if (Heap_lock->owner()->is_ConcurrentGC_thread()){
-    log_info(gc)("is gc task thread");
-  }
-  if (Heap_lock->owner()->is_Named_thread()){
-    log_info(gc)("is named thread");
-  }
-  if (Heap_lock->owner()->is_Worker_thread()){
-    log_info(gc)("is worker thread");
-  }
+  // if (Heap_lock->owner()->is_Java_thread()){
+  //   log_info(gc)("is java thread");
+  // }
+  // if (Heap_lock->owner()->is_VM_thread()){
+  //   log_info(gc)("is vm thread");
+  // }
+  // if (Heap_lock->owner()->is_GC_task_thread()){
+  //   log_info(gc)("is gc task thread");
+  // }
+  // if (Heap_lock->owner()->is_ConcurrentGC_thread()){
+  //   log_info(gc)("is gc task thread");
+  // }
+  // if (Heap_lock->owner()->is_Named_thread()){
+  //   log_info(gc)("is named thread");
+  // }
+  // if (Heap_lock->owner()->is_Worker_thread()){
+  //   log_info(gc)("is worker thread");
+  // }
   // log_info(gc)("owner: %s", Heap_lock->owner()->name());
   // log_info(gc)("owner: %s", Heap_lock->owner()->name());
   // log_info(gc)("owner: %s", Heap_lock->owner()->name());
@@ -1928,9 +1928,9 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
         // into code that might be executed if the background
         // collection was preempted.
         {
-          ReleaseForegroundGC x(this);   // unblock FG collection
-          MutexLockerEx       y(Heap_lock, Mutex::_no_safepoint_check_flag);
-          CMSTokenSync        z(true);   // not strictly needed.
+          // ReleaseForegroundGC x(this);   // unblock FG collection
+          // MutexLockerEx       y(Heap_lock, Mutex::_no_safepoint_check_flag);
+          // CMSTokenSync        z(true);   // not strictly needed.
           if (_collectorState == Resizing) {
             compute_new_size();
             save_heap_summary();
@@ -1984,6 +1984,7 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
                        p2i(Thread::current()), _collectorState);
   log_info(gc, heap)("Old: " SIZE_FORMAT "K->" SIZE_FORMAT "K("  SIZE_FORMAT "K)",
                      prev_used / K, _cmsGen->used()/K, _cmsGen->capacity() /K);
+  heap->update_full_collections_completed();
 }
 
 void CMSCollector::register_gc_start(GCCause::Cause cause) {
@@ -5434,7 +5435,6 @@ void CMSCollector::sweep() {
   CMSHeap* heap = CMSHeap::heap();
   heap->clear_incremental_collection_failed();  // Worth retrying as fresh space may have been freed up
 //  heap->update_full_collections_completed(_collection_count_start);
-  heap->update_full_collections_completed();
 }
 
 // FIX ME!!! Looks like this belongs in CFLSpace, with

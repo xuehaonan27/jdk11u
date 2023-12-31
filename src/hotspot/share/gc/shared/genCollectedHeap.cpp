@@ -712,22 +712,26 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
     return result;   // Could be null if we are out of space.
   } else if (!incremental_collection_will_fail(false /* don't consult_young */)) {
     // Do an incremental collection.
+    log_info(gc)("do collection 1 call");
     do_collection(false,                     // full
                   false,                     // clear_all_soft_refs
                   size,                      // size
                   is_tlab,                   // is_tlab
                   GenCollectedHeap::OldGen); // max_generation
+    log_info(gc)("do collection 1 complete");
   } else {
     log_trace(gc)(" :: Trying full because partial may fail :: ");
     // Try a full collection; see delta for bug id 6266275
     // for the original code and why this has been simplified
     // with from-space allocation criteria modified and
     // such allocation moved out of the safepoint path.
+    log_info(gc)("do collection 2 call");
     do_collection(true,                      // full
                   false,                     // clear_all_soft_refs
                   size,                      // size
                   is_tlab,                   // is_tlab
                   GenCollectedHeap::OldGen); // max_generation
+    log_info(gc)("do collection 2 complete");
   }
 
   result = attempt_allocation(size, is_tlab, false /*first_only*/);
@@ -751,11 +755,13 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
   {
     UIntFlagSetting flag_change(MarkSweepAlwaysCompactCount, 1); // Make sure the heap is fully compacted
 
+    log_info(gc)("do collection 3 call");
     do_collection(true,                      // full
                   true,                      // clear_all_soft_refs
                   size,                      // size
                   is_tlab,                   // is_tlab
                   GenCollectedHeap::OldGen); // max_generation
+    log_info(gc)("do collection 3 complete");
   }
 
   result = attempt_allocation(size, is_tlab, false /* first_only */);

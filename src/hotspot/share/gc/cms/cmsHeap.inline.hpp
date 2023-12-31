@@ -84,6 +84,7 @@ void CMSHeap::do_collection(bool           full,
   
 
   wait_for_background(_full_gc_count_before);
+  log_info(gc)("do collection finished");
 
 }
 
