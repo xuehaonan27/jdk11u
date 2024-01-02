@@ -113,8 +113,15 @@ void ConcurrentMarkSweepThread::stop_service() {
   // CMS thread(s) that might be slumbering in
   // sleepBeforeNextCycle.
   // assert(false, "Should not reach here");
-  MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
-  CGC_lock->notify_all();
+  {
+    MutexLockerEx x(CGC_lock, Mutex::_no_safepoint_check_flag);
+    CGC_lock->notify_all();
+  }
+  
+  {
+    MutexLockerEx mu(FgBgSync_lock, Mutex::_no_safepoint_check_flag);
+    FgBgSync_lock->notify_all();
+  }
 }
 
 void ConcurrentMarkSweepThread::threads_do(ThreadClosure* tc) {
