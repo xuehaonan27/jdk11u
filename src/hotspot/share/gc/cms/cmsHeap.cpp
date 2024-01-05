@@ -282,3 +282,29 @@ GrowableArray<MemoryPool*> CMSHeap::memory_pools() {
   memory_pools.append(_old_pool);
   return memory_pools;
 }
+
+
+bool CMSHeap::supports_tlab_allocation() const {
+  return _old_gen->supports_tlab_allocation();
+}
+
+size_t CMSHeap::tlab_capacity(Thread* thr) const {
+  if (_old_gen->supports_tlab_allocation()) {
+    return _old_gen->tlab_capacity();
+  }
+  return 0;
+}
+
+size_t CMSHeap::tlab_used(Thread* thr) const {
+  if (_old_gen->supports_tlab_allocation()) {
+    return _old_gen->tlab_used();
+  }
+  return 0;
+}
+
+size_t CMSHeap::unsafe_max_tlab_alloc(Thread* thr) const {
+  if (_old_gen->supports_tlab_allocation()) {
+    return _old_gen->unsafe_max_tlab_alloc();
+  }
+  return 0;
+}

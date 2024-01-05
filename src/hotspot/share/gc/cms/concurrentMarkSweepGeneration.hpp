@@ -1086,6 +1086,13 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
     assert(_collector == NULL, "already set");
     _collector = collector;
   }
+
+  bool supports_tlab_allocation() const { return true; }
+  size_t tlab_capacity() const;
+  size_t tlab_used() const;
+  size_t unsafe_max_tlab_alloc() const;
+
+
   CompactibleFreeListSpace*  cmsSpace() const { return _cmsSpace;  }
 
   Mutex* freelistLock() const;

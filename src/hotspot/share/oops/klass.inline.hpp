@@ -63,6 +63,9 @@ inline Klass* Klass::decode_klass_not_null(narrowKlass v) {
   assert(!is_null(v), "narrow klass value can never be zero");
   int    shift = Universe::narrow_klass_shift();
   Klass* result = (Klass*)(void*)((uintptr_t)Universe::narrow_klass_base() + ((uintptr_t)v << shift));
+  // if(!check_klass_alignment(result)){
+  //   log_info(gc)("class name: %s", result->name()->as_C_string());
+  // }
   assert(check_klass_alignment(result), "address not aligned: " INTPTR_FORMAT, p2i((void*) result));
   return result;
 }

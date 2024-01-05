@@ -123,6 +123,7 @@ void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
       myThread()->incr_allocated_bytes(used_bytes());
     }
 
+    log_info(gc)("top: %p, hard end: %p", top(), hard_end());
     Universe::heap()->fill_with_dummy_object(top(), hard_end(), retire && zap);
 
     if (retire || ZeroTLAB) {  // "Reset" the TLAB

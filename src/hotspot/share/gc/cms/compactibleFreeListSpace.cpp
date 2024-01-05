@@ -1235,7 +1235,7 @@ const {
       // The barrier is required to prevent reordering of the free chunk check
       // and the klass read.
       OrderAccess::loadload();
-
+      // log_info(gc)("object at %p", p);
       // Ensure klass read before size.
       Klass* k = oop(p)->klass_or_null_acquire();
       if (k != NULL) {

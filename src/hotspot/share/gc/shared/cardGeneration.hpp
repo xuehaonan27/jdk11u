@@ -64,6 +64,8 @@ class CardGeneration: public Generation {
   // Attempt to expand the generation by "bytes".  Expand by at a
   // minimum "expand_bytes".  Return true if some amount (not
   // necessarily the full "bytes") was done.
+  virtual bool supports_tlab_allocation() const { return false; }
+  
   virtual bool expand(size_t bytes, size_t expand_bytes);
 
   // Shrink generation with specified size

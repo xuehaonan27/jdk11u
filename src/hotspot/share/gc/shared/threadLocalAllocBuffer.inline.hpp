@@ -30,11 +30,14 @@
 #include "logging/log.hpp"
 #include "runtime/thread.hpp"
 #include "utilities/copy.hpp"
+#include "gc/cms/compactibleFreeListSpace.hpp"
 
 inline HeapWord* ThreadLocalAllocBuffer::allocate(size_t size) {
   invariants();
   HeapWord* obj = top();
-  if (pointer_delta(end(), obj) >= size) {
+  size = CompactibleFreeListSpace::adjustObjectSize(size);
+  // log_info(gc)("tlab allocation, adjusted size: %lu", size);
+  if (pointer_delta(end(), obj) >= size + MinChunkSize) {
     // successful thread-local allocation
 #ifdef ASSERT
     // Skip mangling the space corresponding to the object header to

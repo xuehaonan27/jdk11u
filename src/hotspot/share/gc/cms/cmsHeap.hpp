@@ -114,6 +114,11 @@ public:
   template <typename OopClosureType1, typename OopClosureType2>
   void oop_since_save_marks_iterate(OopClosureType1* cur,
                                     OopClosureType2* older);
+
+  virtual bool supports_tlab_allocation() const;
+  virtual size_t tlab_capacity(Thread* thr) const;
+  virtual size_t tlab_used(Thread* thr) const;
+  virtual size_t unsafe_max_tlab_alloc(Thread* thr) const;
                                     
 
 

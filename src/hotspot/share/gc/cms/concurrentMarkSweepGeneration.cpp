@@ -840,6 +840,18 @@ HeapWord* ConcurrentMarkSweepGeneration::have_lock_and_allocate(size_t size,
   return res;
 }
 
+size_t ConcurrentMarkSweepGeneration::tlab_capacity() const {
+  return capacity();
+}
+
+size_t ConcurrentMarkSweepGeneration::tlab_used() const {
+  return used();
+}
+
+size_t ConcurrentMarkSweepGeneration::unsafe_max_tlab_alloc() const {
+  return free();
+}
+
 // In the case of direct allocation by mutators in a generation that
 // is being concurrently collected, the object must be allocated
 // live (grey) if the background collector has started marking.
