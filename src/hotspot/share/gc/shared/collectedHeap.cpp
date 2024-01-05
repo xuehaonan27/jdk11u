@@ -359,7 +359,7 @@ size_t CollectedHeap::filler_array_hdr_size() {
 }
 
 size_t CollectedHeap::filler_array_min_size() {
-  return align_object_size(filler_array_hdr_size()); // align to MinObjAlignment
+  return CompactibleFreeListSpace::adjustObjectSize(filler_array_hdr_size()); // align to MinObjAlignment
 }
 
 #ifdef ASSERT
