@@ -31,6 +31,7 @@
 #include "runtime/thread.inline.hpp"
 #include "runtime/threadSMR.hpp"
 #include "utilities/copy.hpp"
+#include "gc/cms/compactibleFreeListSpace.hpp"
 
 // Thread-Local Edens support
 
@@ -268,6 +269,12 @@ void ThreadLocalAllocBuffer::startup_initialization() {
                                min_size(), Thread::current()->tlab().initial_desired_size(), max_size());
 }
 
+size_t ThreadLocalAllocBuffer::end_reserve() {
+    int reserve_size = typeArrayOopDesc::header_size(T_INT);
+    return MAX2(MinChunkSize, (size_t)MAX2(reserve_size, _reserve_for_allocation_prefetch));
+//    return MAX2(reserve_size, _reserve_for_allocation_prefetch);
+}
+
 size_t ThreadLocalAllocBuffer::initial_desired_size() {
   size_t init_sz = 0;
 
@@ -471,3 +478,4 @@ void GlobalTLABStats::print() {
             _total_fast_refill_waste * HeapWordSize,
             _max_fast_refill_waste * HeapWordSize);
 }
+

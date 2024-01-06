@@ -357,7 +357,7 @@ HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const 
 #endif // ASSERT
   }
 
-  tlab.fill(mem, mem + _word_size, allocation._allocated_tlab_size);
+  tlab.fill(mem, mem + CompactibleFreeListSpace::adjustObjectSize(_word_size), allocation._allocated_tlab_size);
   return mem;
 }
 
@@ -378,8 +378,10 @@ oop MemAllocator::allocate() const {
     Allocation allocation(*this, &obj);
     HeapWord* mem = mem_allocate(allocation);
     if (mem != NULL) {
+      log_info(gc)("allocation: succeed at %p, with word size %lu", mem, _word_size);
       obj = initialize(mem);
     } else {
+      log_info(gc)("allocation: failed with word size %lu", _word_size);
       // The unhandled oop detector will poison local variable obj,
       // so reset it to NULL if mem is NULL.
       obj = NULL;

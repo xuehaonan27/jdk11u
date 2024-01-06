@@ -307,7 +307,6 @@ size_t MinChunkSize = 0;
 void CompactibleFreeListSpace::set_cms_values() {
   // Set CMS global values
   assert(MinChunkSize == 0, "already set");
-
   // MinChunkSize should be a multiple of MinObjAlignment and be large enough
   // for chunks to contain a FreeChunk.
   _min_chunk_size_in_bytes = align_up(sizeof(FreeChunk), MinObjAlignmentInBytes);
@@ -316,6 +315,8 @@ void CompactibleFreeListSpace::set_cms_values() {
   assert(IndexSetStart == 0 && IndexSetStride == 0, "already set");
   IndexSetStart  = MinChunkSize;
   IndexSetStride = MinObjAlignment;
+
+  log_info(gc)("MinObjAlignment: %d, MinObjAlignmentInBytes: %d, MinChunkSize: %lu, BytesPerWord: %d", MinObjAlignment,  MinObjAlignmentInBytes, MinChunkSize, BytesPerWord);
 }
 
 // Constructor
@@ -1159,7 +1160,13 @@ size_t CompactibleFreeListSpace::block_size(const HeapWord* p) const {//hua
   // This must be volatile, or else there is a danger that the compiler
   // will compile the code below into a sometimes-infinite loop, by keeping
   // the value read the first time in a register.
+  int count = 0;
   while (true) {
+    count += 1;
+    if (count >= 5){
+      log_info(gc)("oop at %p", p);
+    }
+    assert(count < 5, "too many times");
     // We must do this until we get a consistent view of the object.
     if (FreeChunk::indicatesFreeChunk(p)) {
       volatile FreeChunk* fc = (volatile FreeChunk*)p;
@@ -1177,6 +1184,7 @@ size_t CompactibleFreeListSpace::block_size(const HeapWord* p) const {//hua
         assert(res != 0, "Block size should not be 0");
         return res;
       }
+      log_info(gc)("free chunk inconsistent");
     } else {
       // The barrier is required to prevent reordering of the free chunk check
       // and the klass read.
