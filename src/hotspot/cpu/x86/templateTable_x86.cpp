@@ -4003,6 +4003,7 @@ void TemplateTable::_new() {
   // This is done before loading InstanceKlass to be consistent with the order
   // how Constant Pool is updated (see ConstantPool::klass_at_put)
   const int tags_offset = Array<u1>::base_offset_in_bytes();
+  __ jmp(slow_case_no_pop);
   __ cmpb(Address(rax, rdx, Address::times_1, tags_offset), JVM_CONSTANT_Class);
   __ jcc(Assembler::notEqual, slow_case_no_pop);
 

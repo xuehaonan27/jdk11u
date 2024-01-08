@@ -667,6 +667,7 @@ void BinaryTreeDictionary<Chunk_t, FreeList_t>::insert_chunk_in_tree(Chunk_t* fc
 
   // work down from the _root, looking for insertion point
   for (prevTL = curTL = root(); curTL != NULL;) {
+    log_info(gc)("working on %p", curTL);
     if (curTL->size() == size)  // exact match
       break;
     prevTL = curTL;
