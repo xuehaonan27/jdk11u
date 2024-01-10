@@ -42,11 +42,11 @@ inline HeapWord* ThreadLocalAllocBuffer::allocate(size_t size) {
   invariants();
   HeapWord* obj = top();
   size = CompactibleFreeListSpace::adjustObjectSize(size);
-  log_info(gc)("tlab allocation, adjusted size: %lu", size);
+  // log_info(gc)("tlab allocation, adjusted size: %lu", size);
   if(top() == (void*)0xff4a6f40){
     conditional_breakpoint1(this);
   }
-  if (pointer_delta(end(), obj) >= size + MinChunkSize) {
+  if (pointer_delta(end(), obj) >= size) {
     // successful thread-local allocation
 #ifdef ASSERT
     // Skip mangling the space corresponding to the object header to
@@ -57,9 +57,9 @@ inline HeapWord* ThreadLocalAllocBuffer::allocate(size_t size) {
 #endif // ASSERT
     // This addition is safe because we know that top is
     // at least size below end, so the add can't wrap.
-    log_info(gc)("set top: %p, %lu", obj, size);
+    // log_info(gc)("set top: %p, %lu", obj, size);
     set_top(obj + size);
-    log_info(gc)("top: %p", top());
+    // log_info(gc)("top: %p", top());
 
     invariants();
     return obj;

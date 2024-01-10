@@ -486,7 +486,10 @@ void CollectedHeap::ensure_parsability(bool retire_tlabs) {
          " to threads list is doomed to failure!");
   BarrierSet *bs = BarrierSet::barrier_set();
   for (; JavaThread *thread = jtiwh.next(); ) {
-     if (use_tlab) thread->tlab().make_parsable(retire_tlabs);
+     if (use_tlab){
+      thread->tlab().make_parsable(retire_tlabs);
+      thread->tlab().initialize();
+     }
      bs->make_parsable(thread);
   }
 }

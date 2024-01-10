@@ -7256,7 +7256,7 @@ size_t SweepClosure::do_blk_careful(HeapWord* addr) {
     )
   } else {
     // Chunk that is alive.
-    log_info(gc)("do live chunk: %p", fc);
+    // log_info(gc)("do live chunk: %p", fc);
     res = do_live_chunk(fc);
     debug_only(_sp->verifyFreeLists());
     NOT_PRODUCT(
