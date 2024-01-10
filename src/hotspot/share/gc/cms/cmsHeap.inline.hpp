@@ -37,7 +37,7 @@ void CMSHeap::oop_since_save_marks_iterate(OopClosureType1* cur,
 }
 
 void CMSHeap::do_collection(bool           full,
-                                     bool           clear_all_soft_refs,
+                                     bool          TraceMemoryManagerStats tmms(gen->gc_manager(), gc_cause()); clear_all_soft_refs,
                                      size_t         size,
                                      bool           is_tlab,
                                      GenerationType max_generation) {
@@ -73,6 +73,8 @@ void CMSHeap::do_collection(bool           full,
     MutexLockerEx x(FullGCCount_lock, Mutex::_no_safepoint_check_flag);
     _full_gc_count_before = total_full_collections();
   }
+
+  TraceMemoryManagerStats tmms(old_gen(), gc_cause());
 
   CMSCollector::request_full_gc( _full_gc_count_before, gc_cause());
   log_info(gc)("Full gc request send notify");

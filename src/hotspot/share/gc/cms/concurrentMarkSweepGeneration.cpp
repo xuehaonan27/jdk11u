@@ -2887,7 +2887,7 @@ class CMSParInitialMarkTask: public CMSParMarkTask {
 void CMSCollector::checkpointRootsInitial() {
   assert(_collectorState == InitialMarking, "Wrong collector state");
   check_correct_thread_executing();
-  TraceCMSMemoryManagerStats tms(_collectorState, CMSHeap::heap()->gc_cause());
+//  TraceCMSMemoryManagerStats tms(_collectorState, CMSHeap::heap()->gc_cause());
 
   save_heap_summary();
   report_heap_summary(GCWhen::BeforeGC);
@@ -4184,7 +4184,7 @@ void CMSCollector::checkpointRootsFinal() {
   // world is stopped at this checkpoint
   assert(SafepointSynchronize::is_at_safepoint(),
          "world should be stopped");
-  TraceCMSMemoryManagerStats tms(_collectorState, CMSHeap::heap()->gc_cause());
+//  TraceCMSMemoryManagerStats tms(_collectorState, CMSHeap::heap()->gc_cause());
 
   verify_work_stacks_empty();
   verify_overflow_empty();
@@ -5366,7 +5366,7 @@ void CMSCollector::sweep() {
   verify_work_stacks_empty();
   verify_overflow_empty();
   increment_sweep_count();
-  TraceCMSMemoryManagerStats tms(_collectorState, CMSHeap::heap()->gc_cause());
+//  TraceCMSMemoryManagerStats tms(_collectorState, CMSHeap::heap()->gc_cause());
 
   _inter_sweep_timer.stop();
   _inter_sweep_estimate.sample(_inter_sweep_timer.seconds());
