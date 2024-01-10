@@ -28,6 +28,7 @@
 #include "gc/cms/cmsHeap.hpp"
 #include "gc/cms/concurrentMarkSweepGeneration.inline.hpp"
 #include "gc/serial/defNewGeneration.inline.hpp"
+#include "services/memoryService.hpp"
 
 template <typename OopClosureType1, typename OopClosureType2>
 void CMSHeap::oop_since_save_marks_iterate(OopClosureType1* cur,
@@ -37,7 +38,7 @@ void CMSHeap::oop_since_save_marks_iterate(OopClosureType1* cur,
 }
 
 void CMSHeap::do_collection(bool           full,
-                                     bool          TraceMemoryManagerStats tmms(gen->gc_manager(), gc_cause()); clear_all_soft_refs,
+                                     bool           clear_all_soft_refs,
                                      size_t         size,
                                      bool           is_tlab,
                                      GenerationType max_generation) {
@@ -74,7 +75,7 @@ void CMSHeap::do_collection(bool           full,
     _full_gc_count_before = total_full_collections();
   }
 
-  TraceMemoryManagerStats tmms(old_gen(), gc_cause());
+  TraceMemoryManagerStats tmms(old_gen()->gc_manager(), gc_cause());
 
   CMSCollector::request_full_gc( _full_gc_count_before, gc_cause());
   log_info(gc)("Full gc request send notify");
