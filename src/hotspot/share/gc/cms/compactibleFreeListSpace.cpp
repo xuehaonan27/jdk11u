@@ -1222,7 +1222,12 @@ const {
   // will compile the code below into a sometimes-infinite loop, by keeping
   // the value read the first time in a register.
   DEBUG_ONLY(uint loops = 0;)
+  int count = 0;
   while (true) {
+    count += 1;
+    if (count >= 5){
+      log_info(gc)("oop at %p", p);
+    }
     // We must do this until we get a consistent view of the object.
     if (FreeChunk::indicatesFreeChunk(p)) {
       volatile FreeChunk* fc = (volatile FreeChunk*)p;
@@ -1243,7 +1248,7 @@ const {
       // The barrier is required to prevent reordering of the free chunk check
       // and the klass read.
       OrderAccess::loadload();
-      // log_info(gc)("object at %p", p);
+      log_info(gc)("object at %p", p);
       // Ensure klass read before size.
       Klass* k = oop(p)->klass_or_null_acquire();
       if (k != NULL) {

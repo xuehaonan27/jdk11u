@@ -488,7 +488,7 @@ void CollectedHeap::ensure_parsability(bool retire_tlabs) {
   for (; JavaThread *thread = jtiwh.next(); ) {
      if (use_tlab){
       thread->tlab().make_parsable(retire_tlabs);
-      thread->tlab().initialize();
+      // thread->tlab().initialize();
      }
      bs->make_parsable(thread);
   }

@@ -285,7 +285,7 @@ HeapWord* MemAllocator::allocate_inside_tlab(Allocation& allocation) const {
   assert(UseTLAB, "should use UseTLAB");
 
   // Try allocating from an existing TLAB.
-  // log_info(gc)("tlab allocation, required size: %lu", _word_size);
+  log_info(gc)("tlab allocation, required size: %lu", _word_size);
   HeapWord* mem = _thread->tlab().allocate(_word_size);
   if (mem != NULL) {
     return mem;
@@ -378,10 +378,10 @@ oop MemAllocator::allocate() const {
     Allocation allocation(*this, &obj);
     HeapWord* mem = mem_allocate(allocation);
     if (mem != NULL) {
-      // log_info(gc)("allocation: succeed at %p, with word size %lu", mem, _word_size);
+      log_info(gc)("allocation: succeed at %p, with word size %lu", mem, _word_size);
       obj = initialize(mem);
     } else {
-      // log_info(gc)("allocation: failed with word size %lu", _word_size);
+      log_info(gc)("allocation: failed with word size %lu", _word_size);
       // The unhandled oop detector will poison local variable obj,
       // so reset it to NULL if mem is NULL.
       obj = NULL;

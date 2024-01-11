@@ -532,7 +532,7 @@ CMSCollector::CMSCollector(ConcurrentMarkSweepGeneration* cmsGen,
   if (CMSConcurrentMTEnabled) {
     if (FLAG_IS_DEFAULT(ConcGCThreads)) {
       // just for now
-      FLAG_SET_DEFAULT(ConcGCThreads, ParallelGCThreads);
+      FLAG_SET_DEFAULT(ConcGCThreads, (ParallelGCThreads + 3) / 4);
     }
     if (ConcGCThreads > 1) {
       _conc_workers = new YieldingFlexibleWorkGang("CMS Thread",
@@ -1759,35 +1759,12 @@ class ReleaseForegroundGC: public StackObj {
 };
 
 void CMSCollector::collect_in_background(GCCause::Cause cause) {
-  // if (Heap_lock->owner()->is_Java_thread()){
-  //   log_info(gc)("is java thread");
-  // }
-  // if (Heap_lock->owner()->is_VM_thread()){
-  //   log_info(gc)("is vm thread");
-  // }
-  // if (Heap_lock->owner()->is_GC_task_thread()){
-  //   log_info(gc)("is gc task thread");
-  // }
-  // if (Heap_lock->owner()->is_ConcurrentGC_thread()){
-  //   log_info(gc)("is gc task thread");
-  // }
-  // if (Heap_lock->owner()->is_Named_thread()){
-  //   log_info(gc)("is named thread");
-  // }
-  // if (Heap_lock->owner()->is_Worker_thread()){
-  //   log_info(gc)("is worker thread");
-  // }
-  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
-  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
-  // log_info(gc)("owner: %s", Heap_lock->owner()->name());
-//  assert(Heap_lock->owned_by_self(), "Locking discipline.");
-//  assert(Thread::current()->is_VM_thread(),
-//    "hua: A modified collection is only allowed on a VM thread.");
 
   CMSHeap* heap = CMSHeap::heap();
   {
     bool safepoint_check = Mutex::_no_safepoint_check_flag;
 //    MutexLockerEx hl(Heap_lock, safepoint_check);
+    // log_info(gc)("Freelist lock owner: %p, %s", _cmsGen->freelistLock()->owner(), _cmsGen->freelistLock()->owner()->name());
     FreelistLocker fll(this);
     MutexLockerEx x(CGC_lock, safepoint_check);
 //    if (_foregroundGCIsActive) {
@@ -7256,7 +7233,7 @@ size_t SweepClosure::do_blk_careful(HeapWord* addr) {
     )
   } else {
     // Chunk that is alive.
-    // log_info(gc)("do live chunk: %p", fc);
+    log_info(gc)("do live chunk: %p", fc);
     res = do_live_chunk(fc);
     debug_only(_sp->verifyFreeLists());
     NOT_PRODUCT(

@@ -74,6 +74,9 @@ void CMSHeap::do_collection(bool           full,
     MutexLockerEx x(FullGCCount_lock, Mutex::_no_safepoint_check_flag);
     _full_gc_count_before = total_full_collections();
   }
+  bool complete = full && (max_generation == OldGen);
+
+  // gc_prologue(complete);
 
   TraceMemoryManagerStats tmms(old_gen()->gc_manager(), gc_cause());
 
@@ -87,6 +90,9 @@ void CMSHeap::do_collection(bool           full,
   
 
   wait_for_background(_full_gc_count_before);
+
+  // gc_epilogue(complete);
+
   log_info(gc)("do collection finished");
 
 }
