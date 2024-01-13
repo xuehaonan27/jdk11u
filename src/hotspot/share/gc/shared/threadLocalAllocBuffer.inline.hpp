@@ -74,8 +74,8 @@ inline size_t ThreadLocalAllocBuffer::compute_size(size_t obj_size) {
   // unsafe_max_tlab_alloc is just a hint.
   const size_t available_size = Universe::heap()->unsafe_max_tlab_alloc(myThread()) /
                                                   HeapWordSize;
-  size_t new_tlab_size = MIN3(available_size, desired_size() + align_object_size(obj_size), max_size());
-
+  size_t new_tlab_size = MIN3(available_size, desired_size() + CompactibleFreeListSpace::adjustObjectSize(obj_size), max_size());
+  log_info(gc)("av %lu, desire %lu, max %lu", available_size, desired_size() + CompactibleFreeListSpace::adjustObjectSize(obj_size), max_size());
   // Make sure there's enough room for object and filler int[].
   if (new_tlab_size < compute_min_size(obj_size)) {
     // If there isn't enough room for the allocation, return failure.
@@ -89,7 +89,7 @@ inline size_t ThreadLocalAllocBuffer::compute_size(size_t obj_size) {
 }
 
 inline size_t ThreadLocalAllocBuffer::compute_min_size(size_t obj_size) {
-  const size_t aligned_obj_size = align_object_size(obj_size);
+  const size_t aligned_obj_size = CompactibleFreeListSpace::adjustObjectSize(obj_size);
   const size_t size_with_reserve = aligned_obj_size + alignment_reserve();
   return MAX2(size_with_reserve, heap_word_size(MinTLABSize));
 }

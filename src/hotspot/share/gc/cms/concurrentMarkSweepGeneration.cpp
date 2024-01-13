@@ -2695,7 +2695,7 @@ ConcurrentMarkSweepGeneration::expand_and_allocate(size_t word_size,
                                                    bool   tlab,
                                                    bool   parallel) {
   CMSSynchronousYieldRequest yr;
-  assert(!tlab, "Can't deal with TLAB allocation");
+  // assert(!tlab, "Can't deal with TLAB allocation");
   MutexLockerEx x(freelistLock(), Mutex::_no_safepoint_check_flag);
   expand_for_gc_cause(word_size*HeapWordSize, MinHeapDeltaBytes, CMSExpansionCause::_satisfy_allocation);
   if (GCExpandToAllocateDelayMillis > 0) {

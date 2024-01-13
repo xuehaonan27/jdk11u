@@ -319,7 +319,7 @@ HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const 
 
   // Discard tlab and allocate a new one.
   // To minimize fragmentation, the last TLAB may be smaller than the rest.
-  size_t new_tlab_size = CompactibleFreeListSpace::adjustObjectSize(tlab.compute_size(_word_size));
+  size_t new_tlab_size = tlab.compute_size(CompactibleFreeListSpace::adjustObjectSize(_word_size));
 
 //  log_info(gc)("tlab free: %lu, refill_waste_limit: %lu", tlab.free(), tlab.refill_waste_limit());
   tlab.clear_before_allocation();
@@ -330,8 +330,9 @@ HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const 
 
   // Allocate a new TLAB requesting new_tlab_size. Any size
   // between minimal and new_tlab_size is accepted.
-  size_t min_tlab_size = CompactibleFreeListSpace::adjustObjectSize(ThreadLocalAllocBuffer::compute_min_size(_word_size));
+  size_t min_tlab_size = ThreadLocalAllocBuffer::compute_min_size(CompactibleFreeListSpace::adjustObjectSize(_word_size));
   mem = _heap->allocate_new_tlab(min_tlab_size, new_tlab_size, &allocation._allocated_tlab_size);
+  log_info(gc)("min %lu, new %lu, alloc %lu", min_tlab_size, new_tlab_size, allocation._allocated_tlab_size);
   if (mem == NULL) {
     assert(allocation._allocated_tlab_size == 0,
            "Allocation failed, but actual size was updated. min: " SIZE_FORMAT
