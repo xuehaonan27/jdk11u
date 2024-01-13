@@ -332,7 +332,7 @@ HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const 
   // between minimal and new_tlab_size is accepted.
   size_t min_tlab_size = ThreadLocalAllocBuffer::compute_min_size(CompactibleFreeListSpace::adjustObjectSize(_word_size));
   mem = _heap->allocate_new_tlab(min_tlab_size, new_tlab_size, &allocation._allocated_tlab_size);
-  log_info(gc)("min %lu, new %lu, alloc %lu", min_tlab_size, new_tlab_size, allocation._allocated_tlab_size);
+//  log_info(gc)("min %lu, new %lu, alloc %lu", min_tlab_size, new_tlab_size, allocation._allocated_tlab_size);
   if (mem == NULL) {
     assert(allocation._allocated_tlab_size == 0,
            "Allocation failed, but actual size was updated. min: " SIZE_FORMAT
