@@ -167,7 +167,7 @@ void VM_GenCollectForAllocation::doit() {
 
   GenCollectedHeap* gch = GenCollectedHeap::heap();
   GCCauseSetter gccs(gch, _gc_cause);
-  log_info(gc)("satisfy_failed_allocation call");
+  log_info(gc)("satisfy_failed_allocation call, tlab: %s", _tlab?"true":"false");
   _result = gch->satisfy_failed_allocation(_word_size, _tlab);
   log_info(gc)("satisfy_failed_allocation return");
   assert(gch->is_in_reserved_or_null(_result), "result not in heap");
