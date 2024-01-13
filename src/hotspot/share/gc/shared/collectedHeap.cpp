@@ -437,7 +437,7 @@ void CollectedHeap::fill_with_objects(HeapWord* start, size_t words, bool zap)
 }
 
 void CollectedHeap::fill_with_dummy_object(HeapWord* start, HeapWord* end, bool zap) {
-  log_info(gc)("fill dummy objects into %p-%p", start, end);
+//  log_info(gc)("fill dummy objects into %p-%p", start, end);
   CollectedHeap::fill_with_object(start, end, zap);
 }
 

@@ -81,7 +81,7 @@ bool VM_GC_Operation::skip_operation() const {
 }
 
 bool VM_GC_Operation::doit_prologue() {
-  log_info(gc)("VM_GC_Operation::doit_prologue() start");
+//  log_info(gc)("VM_GC_Operation::doit_prologue() start");
   assert(Thread::current()->is_Java_thread(), "just checking");
   assert(((_gc_cause != GCCause::_no_gc) &&
           (_gc_cause != GCCause::_no_cause_specified)), "Illegal GCCause");
@@ -106,13 +106,13 @@ bool VM_GC_Operation::doit_prologue() {
   } else {
     _prologue_succeeded = true;
   }
-  log_info(gc)("VM_GC_Operation::doit_prologue() end");
+//  log_info(gc)("VM_GC_Operation::doit_prologue() end");
   return _prologue_succeeded;
 }
 
 
 void VM_GC_Operation::doit_epilogue() {
-  log_info(gc)("VM_GC_Operation::doit_epilogue() start");
+//  log_info(gc)("VM_GC_Operation::doit_epilogue() start");
   assert(Thread::current()->is_Java_thread(), "just checking");
   // Clean up old interpreter OopMap entries that were replaced
   // during the GC thread root traversal.
@@ -121,7 +121,7 @@ void VM_GC_Operation::doit_epilogue() {
     Heap_lock->notify_all();
   }
   Heap_lock->unlock();
-  log_info(gc)("VM_GC_Operation::doit_epilogue() end");
+//  log_info(gc)("VM_GC_Operation::doit_epilogue() end");
 }
 
 bool VM_GC_HeapInspection::skip_operation() const {
@@ -210,7 +210,7 @@ bool VM_GenCollectFull::doit_prologue() {
     _prologue_succeeded = true;
   }
   Heap_lock->unlock();
-  log_info(gc)("VM_GenCollectFull::doit() prologue");
+//  log_info(gc)("VM_GenCollectFull::doit() prologue");
   return _prologue_succeeded;
 }
 
@@ -225,7 +225,7 @@ void VM_GenCollectFull::doit_epilogue() {
     Heap_lock->notify_all();
   }
   Heap_lock->unlock();
-  log_info(gc)("VM_GenCollectFull::doit() epilogue");
+//  log_info(gc)("VM_GenCollectFull::doit() epilogue");
 }
 
 VM_CollectForMetadataAllocation::VM_CollectForMetadataAllocation(ClassLoaderData* loader_data,

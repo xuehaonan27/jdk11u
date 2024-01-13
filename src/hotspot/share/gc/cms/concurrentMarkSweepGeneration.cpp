@@ -1427,26 +1427,26 @@ void CMSCollector::acquire_control_and_collect(bool full,
   assert(!Thread::current()->is_ConcurrentGC_thread(),
          "shouldn't try to acquire control from self!");
 
-  log_info(gc)("acquire control");
-  if (Heap_lock->owner()->is_Java_thread()){
-    log_info(gc)("is java thread");
-  }
-  if (Heap_lock->owner()->is_VM_thread()){
-    log_info(gc)("is vm thread");
-  }
-  if (Heap_lock->owner()->is_GC_task_thread()){
-    log_info(gc)("is gc task thread");
-  }
-  if (Heap_lock->owner()->is_ConcurrentGC_thread()){
-    log_info(gc)("is gc task thread");
-  }
-  if (Heap_lock->owner()->is_Named_thread()){
-    log_info(gc)("is named thread");
-  }
-  if (Heap_lock->owner()->is_Worker_thread()){
-    log_info(gc)("is worker thread");
-  }
-  log_info(gc)("acquire control log end");
+//  log_info(gc)("acquire control");
+//  if (Heap_lock->owner()->is_Java_thread()){
+//    log_info(gc)("is java thread");
+//  }
+//  if (Heap_lock->owner()->is_VM_thread()){
+//    log_info(gc)("is vm thread");
+//  }
+//  if (Heap_lock->owner()->is_GC_task_thread()){
+//    log_info(gc)("is gc task thread");
+//  }
+//  if (Heap_lock->owner()->is_ConcurrentGC_thread()){
+//    log_info(gc)("is gc task thread");
+//  }
+//  if (Heap_lock->owner()->is_Named_thread()){
+//    log_info(gc)("is named thread");
+//  }
+//  if (Heap_lock->owner()->is_Worker_thread()){
+//    log_info(gc)("is worker thread");
+//  }
+//  log_info(gc)("acquire control log end");
 
   // Start the protocol for acquiring control of the
   // collection from the background collector (aka CMS thread).
@@ -4169,19 +4169,19 @@ void CMSCollector::checkpointRootsFinal() {
   log_debug(gc)("YG occupancy: " SIZE_FORMAT " K (" SIZE_FORMAT " K)",
                 _young_gen->used() / K, _young_gen->capacity() / K);
   {
-    if (CMSScavengeBeforeRemark) {
-      CMSHeap* heap = CMSHeap::heap();
-      // Temporarily set flag to false, GCH->do_collection will
-      // expect it to be false and set to true
-      FlagSetting fl(heap->_is_gc_active, false);
-
-      heap->do_collection(true,                      // full (i.e. force, see below)
-                          false,                     // !clear_all_soft_refs
-                          0,                         // size
-                          false,                     // is_tlab
-                          GenCollectedHeap::YoungGen // type
-        );
-    }
+//    if (CMSScavengeBeforeRemark) {
+//      CMSHeap* heap = CMSHeap::heap();
+//      // Temporarily set flag to false, GCH->do_collection will
+//      // expect it to be false and set to true
+//      FlagSetting fl(heap->_is_gc_active, false);
+//
+//      heap->do_collection(true,                      // full (i.e. force, see below)
+//                          false,                     // !clear_all_soft_refs
+//                          0,                         // size
+//                          false,                     // is_tlab
+//                          GenCollectedHeap::YoungGen // type
+//        );
+//    }
     FreelistLocker x(this);
     MutexLockerEx y(bitMapLock(),
                     Mutex::_no_safepoint_check_flag);
@@ -7233,7 +7233,7 @@ size_t SweepClosure::do_blk_careful(HeapWord* addr) {
     )
   } else {
     // Chunk that is alive.
-    log_info(gc)("do live chunk: %p", fc);
+//    log_info(gc)("do live chunk: %p", fc);
     res = do_live_chunk(fc);
     debug_only(_sp->verifyFreeLists());
     NOT_PRODUCT(

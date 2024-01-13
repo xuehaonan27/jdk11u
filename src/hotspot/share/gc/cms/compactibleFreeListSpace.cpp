@@ -1164,7 +1164,7 @@ size_t CompactibleFreeListSpace::block_size(const HeapWord* p) const {//hua
   while (true) {
     count += 1;
     if (count >= 5){
-      log_info(gc)("oop at %p", p);
+//      log_info(gc)("oop at %p", p);
     }
     assert(count < 5, "too many times");
     // We must do this until we get a consistent view of the object.
@@ -1184,7 +1184,7 @@ size_t CompactibleFreeListSpace::block_size(const HeapWord* p) const {//hua
         assert(res != 0, "Block size should not be 0");
         return res;
       }
-      log_info(gc)("free chunk inconsistent");
+//      log_info(gc)("free chunk inconsistent");
     } else {
       // The barrier is required to prevent reordering of the free chunk check
       // and the klass read.
@@ -1226,7 +1226,7 @@ const {
   while (true) {
     count += 1;
     if (count >= 5){
-      log_info(gc)("oop at %p", p);
+//      log_info(gc)("oop at %p", p);
     }
     // We must do this until we get a consistent view of the object.
     if (FreeChunk::indicatesFreeChunk(p)) {
@@ -1248,7 +1248,7 @@ const {
       // The barrier is required to prevent reordering of the free chunk check
       // and the klass read.
       OrderAccess::loadload();
-      log_info(gc)("object at %p", p);
+//      log_info(gc)("object at %p", p);
       // Ensure klass read before size.
       Klass* k = oop(p)->klass_or_null_acquire();
       if (k != NULL) {

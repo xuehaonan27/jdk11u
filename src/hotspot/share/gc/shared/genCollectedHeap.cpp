@@ -707,7 +707,9 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
     // GC locker is active; instead of a collection we will attempt
     // to expand the heap, if there's room for expansion.
     if (!is_maximal_no_gc()) {
+      log_info(gc)("expand alloc 1");
       result = expand_heap_and_allocate(size, is_tlab);
+      log_info(gc)("expand alloc 1 complete");
     }
     return result;   // Could be null if we are out of space.
   } else if (!incremental_collection_will_fail(false /* don't consult_young */)) {
@@ -742,8 +744,10 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
   }
 
   // OK, collection failed, try expansion.
+  log_info(gc)("expand alloc 2");
   result = expand_heap_and_allocate(size, is_tlab);
   if (result != NULL) {
+    log_info(gc)("expand alloc 2 succeed");
     return result;
   }
 
@@ -764,9 +768,11 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
     log_info(gc)("do collection 3 complete");
   }
 
+  log_info(gc)("attempt allocation call");
   result = attempt_allocation(size, is_tlab, false /* first_only */);
   if (result != NULL) {
     assert(is_in_reserved(result), "result not in heap");
+    log_info(gc)("attempt allocation succeed");
     return result;
   }
 
@@ -777,6 +783,8 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
   // space available is large enough for the allocation, then a more
   // complete compaction phase than we've tried so far might be
   // appropriate.
+
+  log_info(gc)("all attempts failed");
   return NULL;
 }
 
@@ -988,26 +996,26 @@ void GenCollectedHeap::collect_locked(GCCause::Cause cause) {
 void GenCollectedHeap::collect_locked(GCCause::Cause cause, GenerationType max_generation) {
 
 
-  log_info(gc)("collect_locked");
-  if (Heap_lock->owner()->is_Java_thread()){
-    log_info(gc)("is java thread");
-  }
-  if (Heap_lock->owner()->is_VM_thread()){
-    log_info(gc)("is vm thread");
-  }
-  if (Heap_lock->owner()->is_GC_task_thread()){
-    log_info(gc)("is gc task thread");
-  }
-  if (Heap_lock->owner()->is_ConcurrentGC_thread()){
-    log_info(gc)("is gc task thread");
-  }
-  if (Heap_lock->owner()->is_Named_thread()){
-    log_info(gc)("is named thread");
-  }
-  if (Heap_lock->owner()->is_Worker_thread()){
-    log_info(gc)("is worker thread");
-  }
-  log_info(gc)("collect_locked end");
+//  log_info(gc)("collect_locked");
+//  if (Heap_lock->owner()->is_Java_thread()){
+//    log_info(gc)("is java thread");
+//  }
+//  if (Heap_lock->owner()->is_VM_thread()){
+//    log_info(gc)("is vm thread");
+//  }
+//  if (Heap_lock->owner()->is_GC_task_thread()){
+//    log_info(gc)("is gc task thread");
+//  }
+//  if (Heap_lock->owner()->is_ConcurrentGC_thread()){
+//    log_info(gc)("is gc task thread");
+//  }
+//  if (Heap_lock->owner()->is_Named_thread()){
+//    log_info(gc)("is named thread");
+//  }
+//  if (Heap_lock->owner()->is_Worker_thread()){
+//    log_info(gc)("is worker thread");
+//  }
+//  log_info(gc)("collect_locked end");
 
 
   // Read the GC count while holding the Heap_lock
@@ -1032,6 +1040,7 @@ void GenCollectedHeap::do_full_collection(bool clear_all_soft_refs) {
 
 void GenCollectedHeap::do_full_collection(bool clear_all_soft_refs,
                                           GenerationType last_generation) {
+  log_info(gc)("do collection in do_full colleciton 1");
   do_collection(true,                   // full
                 clear_all_soft_refs,    // clear_all_soft_refs
                 0,                      // size
@@ -1042,6 +1051,7 @@ void GenCollectedHeap::do_full_collection(bool clear_all_soft_refs,
   // been attempted and failed, because the old gen was too full
   if (gc_cause() == GCCause::_gc_locker && incremental_collection_failed()) {
     log_debug(gc, jni)("GC locker: Trying a full collection because scavenge failed");
+    log_info(gc)("do collection in do_full colleciton 2");
     // This time allow the old gen to be collected as well
     do_collection(true,                // full
                   clear_all_soft_refs, // clear_all_soft_refs

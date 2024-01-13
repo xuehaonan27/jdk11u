@@ -117,9 +117,9 @@ void ThreadLocalAllocBuffer::accumulate_statistics() {
 // Waste accounting should be done in caller as appropriate; see,
 // for example, clear_before_allocation().
 void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
-  log_info(gc)("make parsable of tlab %p in %p", this, myThread());
+//  log_info(gc)("make parsable of tlab %p in %p", this, myThread());
   if(retire){
-    log_info(gc)("should retire");
+//    log_info(gc)("should retire");
   }
   
   if (end() != NULL) {
@@ -129,7 +129,7 @@ void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
       myThread()->incr_allocated_bytes(used_bytes());
     }
 
-    log_info(gc)("top: %p, hard end: %p", top(), hard_end());
+//    log_info(gc)("top: %p, hard end: %p", top(), hard_end());
     Universe::heap()->fill_with_dummy_object(top(), hard_end(), retire && zap);
 
     if (retire || ZeroTLAB) {  // "Reset" the TLAB
@@ -141,7 +141,7 @@ void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
     }
   }
   else {
-    log_info(gc)("tlab not initialized");
+//    log_info(gc)("tlab not initialized");
   }
   assert(!(retire || ZeroTLAB)  ||
          (start() == NULL && end() == NULL && top() == NULL &&
