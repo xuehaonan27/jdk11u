@@ -311,6 +311,10 @@ HeapWord* GenCollectedHeap::mem_allocate_work(size_t size,
         assert(is_in_reserved(result), "result not in heap");
         return result;
       }
+      
+      if (is_tlab) {
+          return NULL;  // Caller will retry allocating individual object.
+      }
 
       if (GCLocker::is_active_and_needs_gc()) {
         if (is_tlab) {
