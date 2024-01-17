@@ -4513,8 +4513,8 @@ void CMSParRemarkTask::work(uint worker_id) {
     _timer.start();
 
     // Scan all classes that was dirtied during the concurrent marking phase.
-    RemarkCLDClosure remark_closure(&par_mrias_cl);
-    ClassLoaderDataGraph::cld_do(&remark_closure);
+    // RemarkCLDClosure remark_closure(&par_mrias_cl);
+    // ClassLoaderDataGraph::cld_do(&remark_closure);
 
     _timer.stop();
     log_trace(gc, task)("Finished dirty CLD scanning work in %dth thread: %3.3f sec", worker_id, _timer.seconds());
@@ -4662,23 +4662,23 @@ CMSParRemarkTask::do_dirty_card_rescan_tasks(
       this_span.set_end(end_addr);
       assert(!this_span.is_empty(), "Program logic (calculation of n_tasks)");
     }
-    // Iterate over the dirty cards covering this chunk, marking them
-    // precleaned, and setting the corresponding bits in the mod union
-    // table. Since we have been careful to partition at Card and MUT-word
-    // boundaries no synchronization is needed between parallel threads.
-    _collector->_ct->dirty_card_iterate(this_span,
-                                                 &modUnionClosure);
+    // // Iterate over the dirty cards covering this chunk, marking them
+    // // precleaned, and setting the corresponding bits in the mod union
+    // // table. Since we have been careful to partition at Card and MUT-word
+    // // boundaries no synchronization is needed between parallel threads.
+    // _collector->_ct->dirty_card_iterate(this_span,
+    //                                              &modUnionClosure);
 
-    // Having transferred these marks into the modUnionTable,
-    // rescan the marked objects on the dirty cards in the modUnionTable.
-    // Even if this is at a synchronous collection, the initial marking
-    // may have been done during an asynchronous collection so there
-    // may be dirty bits in the mod-union table.
-    _collector->_modUnionTable.dirty_range_iterate_clear(
-                  this_span, &greyRescanClosure);
-    _collector->_modUnionTable.verifyNoOneBitsInRange(
-                                 this_span.start(),
-                                 this_span.end());
+    // // Having transferred these marks into the modUnionTable,
+    // // rescan the marked objects on the dirty cards in the modUnionTable.
+    // // Even if this is at a synchronous collection, the initial marking
+    // // may have been done during an asynchronous collection so there
+    // // may be dirty bits in the mod-union table.
+    // _collector->_modUnionTable.dirty_range_iterate_clear(
+    //               this_span, &greyRescanClosure);
+    // _collector->_modUnionTable.verifyNoOneBitsInRange(
+    //                              this_span.start(),
+    //                              this_span.end());
   }
   pst->all_tasks_completed();  // declare that i am done
 }
