@@ -41,6 +41,8 @@ int              ThreadLocalAllocBuffer::_reserve_for_allocation_prefetch = 0;
 unsigned         ThreadLocalAllocBuffer::_target_refills = 0;
 GlobalTLABStats* ThreadLocalAllocBuffer::_global_stats   = NULL;
 
+ThreadLocalAllocBuffer* ThreadLocalAllocBuffer::watched = NULL;
+
 void ThreadLocalAllocBuffer::clear_before_allocation() {
   _slow_refill_waste += (unsigned)remaining();
   make_parsable(true);   // also retire the TLAB

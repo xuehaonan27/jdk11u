@@ -52,6 +52,7 @@ private:
   HeapWord* _pf_top;                             // allocation prefetch watermark
   HeapWord* _end;                                // allocation end (can be the sampling end point or _allocation_end)
   HeapWord* _allocation_end;                     // end for allocations (actual TLAB end, excluding alignment_reserve)
+  HeapWord* _prev_top;                                // address after last allocation
 
   size_t    _desired_size;                       // desired size   (including alignment_reserve)
   size_t    _refill_waste_limit;                 // hold onto tlab if free() is larger than this
@@ -77,7 +78,31 @@ private:
   void set_start(HeapWord* start)                { _start = start; }
   void set_end(HeapWord* end)                    { _end = end; }
   void set_allocation_end(HeapWord* ptr)         { _allocation_end = ptr; }
-  void set_top(HeapWord* top)                    { _top = top; }
+
+  void top_changed(){
+
+  }
+
+  void addr_hit(){
+
+  }
+
+  static ThreadLocalAllocBuffer *watched;
+
+  void set_top(HeapWord* top)                    { 
+    if (top == (void*)0x6b2f9e780){
+      watched = this;
+      addr_hit();
+    }
+    if (_prev_top != NULL && top != NULL && _top != NULL){
+      // assert(_prev_top == _top, "top changed");
+      if(_prev_top != _top){
+        top_changed();
+      }
+    }
+    _top = top; 
+    _prev_top = top;
+  }
   void set_pf_top(HeapWord* pf_top)              { _pf_top = pf_top; }
   void set_desired_size(size_t desired_size)     { _desired_size = desired_size; }
   void set_refill_waste_limit(size_t waste)      { _refill_waste_limit = waste;  }

@@ -559,6 +559,7 @@ HeapWord* BlockOffsetArrayNonContigSpace::block_start_unsafe(
     debug_only(HeapWord* last = q);   // for debugging
     q = n;
     n += _sp->block_size(n);
+    // log_info(gc)("n: %p", n);
     assert(n > q,
            "Looping at n = " PTR_FORMAT " with last = " PTR_FORMAT ","
            " while querying blk_start(" PTR_FORMAT ")"

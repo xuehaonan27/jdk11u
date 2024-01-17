@@ -32,20 +32,19 @@
 #include "utilities/copy.hpp"
 #include "gc/cms/compactibleFreeListSpace.hpp"
 
-static ThreadLocalAllocBuffer* watchedBuffer = NULL;
 
-static void conditional_breakpoint1(ThreadLocalAllocBuffer* tlab){
-  watchedBuffer = tlab;
-}
+// static void conditional_breakpoint1(ThreadLocalAllocBuffer* tlab){
+//   watchedBuffer = tlab;
+// }
 
 inline HeapWord* ThreadLocalAllocBuffer::allocate(size_t size) {
   invariants();
   HeapWord* obj = top();
   size = CompactibleFreeListSpace::adjustObjectSize(size);
 //  log_info(gc)("tlab allocation, adjusted size: %lu", size);
-  if(top() == (void*)0xff4a6f40){
-    conditional_breakpoint1(this);
-  }
+  // if(top() == (void*)0xff4a6f40){
+  //   conditional_breakpoint1(this);
+  // }
   if (pointer_delta(end(), obj) >= size) {
     // successful thread-local allocation
 #ifdef ASSERT

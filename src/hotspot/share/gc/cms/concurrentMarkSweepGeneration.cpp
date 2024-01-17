@@ -1895,7 +1895,7 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
       case FinalMarking:
         {
 //          ReleaseForegroundGC x(this);
-
+          // _collectorState = Sweeping;
           VM_CMS_Final_Remark final_remark_op(this);
           final_remark_op.doit_prologue();
           final_remark_op.doit();

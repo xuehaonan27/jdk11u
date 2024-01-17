@@ -1198,6 +1198,7 @@ size_t CompactibleFreeListSpace::block_size(const HeapWord* p) const {//hua
         assert(oopDesc::is_oop(o, true /* ignore mark word */), "Should be an oop.");
 
         size_t res = o->size_given_klass(k);
+        // log_info(gc)("size: %lu", res);
         res = adjustObjectSize(res);
         assert(res != 0, "Block size should not be 0");
         return res;
