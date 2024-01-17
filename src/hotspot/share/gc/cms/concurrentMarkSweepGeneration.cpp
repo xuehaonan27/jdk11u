@@ -6061,30 +6061,30 @@ ParMarkRefsIntoAndScanClosure::ParMarkRefsIntoAndScanClosure(
 // threads. Since the marking bit map is shared, updates are
 // synchronized (via CAS).
 void ParMarkRefsIntoAndScanClosure::do_oop(oop obj) {
-  if (obj != NULL) {
-    // Ignore mark word because this could be an already marked oop
-    // that may be chained at the end of the overflow list.
-    assert(oopDesc::is_oop(obj, true), "expected an oop");
-    HeapWord* addr = (HeapWord*)obj;
-    if (_span.contains(addr) &&
-        !_bit_map->isMarked(addr)) {
-      // mark bit map (object will become grey):
-      // It is possible for several threads to be
-      // trying to "claim" this object concurrently;
-      // the unique thread that succeeds in marking the
-      // object first will do the subsequent push on
-      // to the work queue (or overflow list).
-      if (_bit_map->par_mark(addr)) {
-        // push on work_queue (which may not be empty), and trim the
-        // queue to an appropriate length by applying this closure to
-        // the oops in the oops popped from the stack (i.e. blacken the
-        // grey objects)
-        bool res = _work_queue->push(obj);
-        assert(res, "Low water mark should be less than capacity?");
-        trim_queue(_low_water_mark);
-      } // Else, another thread claimed the object
-    }
-  }
+  // if (obj != NULL) {
+  //   // Ignore mark word because this could be an already marked oop
+  //   // that may be chained at the end of the overflow list.
+  //   assert(oopDesc::is_oop(obj, true), "expected an oop");
+  //   HeapWord* addr = (HeapWord*)obj;
+  //   if (_span.contains(addr) &&
+  //       !_bit_map->isMarked(addr)) {
+  //     // mark bit map (object will become grey):
+  //     // It is possible for several threads to be
+  //     // trying to "claim" this object concurrently;
+  //     // the unique thread that succeeds in marking the
+  //     // object first will do the subsequent push on
+  //     // to the work queue (or overflow list).
+  //     if (_bit_map->par_mark(addr)) {
+  //       // push on work_queue (which may not be empty), and trim the
+  //       // queue to an appropriate length by applying this closure to
+  //       // the oops in the oops popped from the stack (i.e. blacken the
+  //       // grey objects)
+  //       bool res = _work_queue->push(obj);
+  //       assert(res, "Low water mark should be less than capacity?");
+  //       trim_queue(_low_water_mark);
+  //     } // Else, another thread claimed the object
+  //   }
+  // }
 }
 
 // This closure is used to rescan the marked objects on the dirty cards
