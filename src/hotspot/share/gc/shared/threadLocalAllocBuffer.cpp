@@ -121,7 +121,7 @@ void ThreadLocalAllocBuffer::accumulate_statistics() {
 void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
 //  log_info(gc)("make parsable of tlab %p in %p", this, myThread());
   if(retire){
-//    log_info(gc)("should retire");
+  //  log_info(gc)("should retire");
   }
   
   if (end() != NULL) {
@@ -131,7 +131,13 @@ void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
       myThread()->incr_allocated_bytes(used_bytes());
     }
 
-//    log_info(gc)("top: %p, hard end: %p", top(), hard_end());
+   log_info(gc)("fill in tlab %p top: %p, hard end: %p", this, top(), hard_end());
+   if(CompactibleFreeListSpace::adjustObjectSize(pointer_delta(hard_end(), top())) == pointer_delta(hard_end(), top())){
+      log_info(gc)("equals");
+   }
+   else {
+    log_info(gc)("not equal");
+   }
     Universe::heap()->fill_with_dummy_object(top(), hard_end(), retire && zap);
 
     if (retire || ZeroTLAB) {  // "Reset" the TLAB
@@ -143,7 +149,7 @@ void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
     }
   }
   else {
-//    log_info(gc)("tlab not initialized");
+  //  log_info(gc)("tlab not initialized");
   }
   assert(!(retire || ZeroTLAB)  ||
          (start() == NULL && end() == NULL && top() == NULL &&

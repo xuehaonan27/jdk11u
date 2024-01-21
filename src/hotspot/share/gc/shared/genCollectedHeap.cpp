@@ -1000,26 +1000,6 @@ void GenCollectedHeap::collect_locked(GCCause::Cause cause) {
 void GenCollectedHeap::collect_locked(GCCause::Cause cause, GenerationType max_generation) {
 
 
-//  log_info(gc)("collect_locked");
-//  if (Heap_lock->owner()->is_Java_thread()){
-//    log_info(gc)("is java thread");
-//  }
-//  if (Heap_lock->owner()->is_VM_thread()){
-//    log_info(gc)("is vm thread");
-//  }
-//  if (Heap_lock->owner()->is_GC_task_thread()){
-//    log_info(gc)("is gc task thread");
-//  }
-//  if (Heap_lock->owner()->is_ConcurrentGC_thread()){
-//    log_info(gc)("is gc task thread");
-//  }
-//  if (Heap_lock->owner()->is_Named_thread()){
-//    log_info(gc)("is named thread");
-//  }
-//  if (Heap_lock->owner()->is_Worker_thread()){
-//    log_info(gc)("is worker thread");
-//  }
-//  log_info(gc)("collect_locked end");
 
 
   // Read the GC count while holding the Heap_lock

@@ -1230,6 +1230,7 @@ const {
 //      log_info(gc)("oop at %p", p);
     }
     // We must do this until we get a consistent view of the object.
+    log_info(gc)("block scan %p", p);
     if (FreeChunk::indicatesFreeChunk(p)) {
       volatile FreeChunk* fc = (volatile FreeChunk*)p;
       size_t res = fc->size();
@@ -1253,9 +1254,15 @@ const {
       // Ensure klass read before size.
       Klass* k = oop(p)->klass_or_null_acquire();
       if (k != NULL) {
+        if (! k->is_klass()){
+          log_info(gc)("not klass, first two words: %lx, %lx", *(unsigned long*)p, *((unsigned long*)p+1));
+        }
         assert(k->is_klass(), "Should really be klass oop.");
         oop o = (oop)p;
         assert(oopDesc::is_oop(o), "Should be an oop");
+        if (! oopDesc::is_oop(o)){
+          log_info(gc)("not oop, first two words: %lx, %lx", *(unsigned long*)p, *((unsigned long*)p+1));
+        }
 
         size_t res = o->size_given_klass(k);
         res = adjustObjectSize(res);
@@ -1948,7 +1955,10 @@ CompactibleFreeListSpace::addChunkToFreeLists(HeapWord* chunk,
 
   FreeChunk* fc = (FreeChunk*) chunk;
   fc->set_size(size);
-  debug_only(fc->mangleFreed(size));
+  // debug_only(fc->mangleFreed(size));
+  //!!! must be deleted later!!!
+  fc->mangleFreed(size);
+  log_info(gc)("add freechunk %p-%p", chunk, chunk+size);
   if (size < SmallForDictionary) {
     returnChunkToFreeList(fc);
   } else {

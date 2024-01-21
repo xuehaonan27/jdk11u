@@ -371,6 +371,17 @@ void CollectedHeap::fill_args_check(HeapWord* start, size_t words)
   assert(Universe::heap()->is_in_reserved(start + words - 1), "not in heap");
 }
 
+// !!!
+// void CollectedHeap::zap_filler_array(HeapWord* start, size_t words, bool zap)
+// {
+//   if (ZapFillerObjects && zap) {
+//     Copy::fill_to_words(start + filler_array_hdr_size(),
+//                         words - filler_array_hdr_size(), 0XDEAFBABE);
+//   }
+// }
+#endif // ASSERT
+
+// !!! remove !!!
 void CollectedHeap::zap_filler_array(HeapWord* start, size_t words, bool zap)
 {
   if (ZapFillerObjects && zap) {
@@ -378,7 +389,6 @@ void CollectedHeap::zap_filler_array(HeapWord* start, size_t words, bool zap)
                         words - filler_array_hdr_size(), 0XDEAFBABE);
   }
 }
-#endif // ASSERT
 
 void
 CollectedHeap::fill_with_array(HeapWord* start, size_t words, bool zap)
@@ -392,7 +402,10 @@ CollectedHeap::fill_with_array(HeapWord* start, size_t words, bool zap)
 
   ObjArrayAllocator allocator(Universe::intArrayKlassObj(), words, (int)len, /* do_zero */ false);
   allocator.initialize(start);
-  DEBUG_ONLY(zap_filler_array(start, words, zap);)
+  //!!! remove this later !!!
+  log_info(gc)("fill with array into %p-%p", start, start+words);
+  zap_filler_array(start, words, zap);
+  // DEBUG_ONLY(zap_filler_array(start, words, zap);)
 }
 
 void
@@ -437,7 +450,7 @@ void CollectedHeap::fill_with_objects(HeapWord* start, size_t words, bool zap)
 }
 
 void CollectedHeap::fill_with_dummy_object(HeapWord* start, HeapWord* end, bool zap) {
-//  log_info(gc)("fill dummy objects into %p-%p", start, end);
+  // log_info(gc)("fill dummy objects into %p-%p", start, end);
   CollectedHeap::fill_with_object(start, end, zap);
 }
 

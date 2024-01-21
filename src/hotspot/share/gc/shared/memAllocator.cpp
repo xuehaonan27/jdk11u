@@ -322,9 +322,12 @@ HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const 
   size_t new_tlab_size = tlab.compute_size(CompactibleFreeListSpace::adjustObjectSize(_word_size));
 
 //  log_info(gc)("tlab free: %lu, refill_waste_limit: %lu", tlab.free(), tlab.refill_waste_limit());
+  // log_info(gc)("tlab retire during allocation, tlab: %p, start: %p, top: %p, end: %p, hard_end: %p", &tlab,
+  //   tlab.start(), tlab.top(), tlab.end(), tlab.hard_end());
   tlab.clear_before_allocation();
 
   if (new_tlab_size == 0) {
+    // log_info(gc)("not enough space for new tlab %p", &tlab);
     return NULL;
   }
 
@@ -334,7 +337,7 @@ HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const 
   mem = _heap->allocate_new_tlab(min_tlab_size, new_tlab_size, &allocation._allocated_tlab_size);
 //  log_info(gc)("min %lu, new %lu, alloc %lu", min_tlab_size, new_tlab_size, allocation._allocated_tlab_size);
   if (mem == NULL) {
-    // log_info(gc)("failed to allocate tlab");
+    // log_info(gc)("failed to allocate tlab %p", &tlab);
     assert(allocation._allocated_tlab_size == 0,
            "Allocation failed, but actual size was updated. min: " SIZE_FORMAT
            ", desired: " SIZE_FORMAT ", actual: " SIZE_FORMAT,
@@ -359,7 +362,10 @@ HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const 
 #endif // ASSERT
   }
 
+  
   tlab.fill(mem, mem + CompactibleFreeListSpace::adjustObjectSize(_word_size), allocation._allocated_tlab_size);
+  log_info(gc)("tlab fill during allocation, tlab: %p, start: %p, top: %p, end: %p, hard_end: %p", &tlab,
+      tlab.start(), tlab.top(), tlab.end(), tlab.hard_end());
   return mem;
 }
 
@@ -380,7 +386,7 @@ oop MemAllocator::allocate() const {
     Allocation allocation(*this, &obj);
     HeapWord* mem = mem_allocate(allocation);
     if (mem != NULL) {
-//      log_info(gc)("allocation: succeed at %p, with word size %lu", mem, _word_size);
+    //  log_info(gc)("allocation: succeed at %p, with word size %lu", mem, _word_size);
       obj = initialize(mem);
     } else {
 //      log_info(gc)("allocation: failed with word size %lu", _word_size);
