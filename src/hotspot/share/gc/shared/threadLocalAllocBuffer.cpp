@@ -139,6 +139,9 @@ void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
     log_info(gc)("not equal");
    }
     Universe::heap()->fill_with_dummy_object(top(), hard_end(), retire && zap);
+   if (UseConcMarkSweepGC){
+     ((CMSHeap*)Universe::heap())->retireTLAB(start(), hard_end());
+   }
 
     if (retire || ZeroTLAB) {  // "Reset" the TLAB
       set_start(NULL);

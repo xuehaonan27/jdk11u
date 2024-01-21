@@ -1248,6 +1248,10 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
   // Resize the generation after a non-compacting
   // collection.
   void compute_new_size_free_list();
+
+  void retireTLAB(HeapWord* start, HeapWord* end) {
+    cmsSpace()->retireTLAB(start, end);
+  }
 };
 
 //

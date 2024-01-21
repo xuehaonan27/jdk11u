@@ -119,6 +119,12 @@ public:
   virtual size_t tlab_capacity(Thread* thr) const;
   virtual size_t tlab_used(Thread* thr) const;
   virtual size_t unsafe_max_tlab_alloc(Thread* thr) const;
+
+  void retireTLAB(HeapWord* start, HeapWord* end) {
+    MutexLocker ml(Heap_lock);
+    MutexLockerEx x(freelistLock(), Mutex::_no_safepoint_check_flag);
+    old_gen()->retireTLAB(start, end);
+  }
                                     
 
 

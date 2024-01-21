@@ -3176,3 +3176,54 @@ initialize_sequential_subtasks_for_marking(int n_threads,
   pst->set_n_threads(n_threads);
   pst->set_n_tasks((int)n_tasks);
 }
+
+void CompactibleFreeListSpace:: retireTLAB(HeapWord* start, HeapWord* end){
+  HeapWord* p = start;
+
+  while(p < end){
+    // We must do this until we get a consistent view of the object.
+    if (FreeChunk::indicatesFreeChunk(p)) {
+      volatile FreeChunk* fc = (volatile FreeChunk*)p;
+      size_t res = fc->size();
+
+      // Bugfix for systems with weak memory model (PPC64/IA64). The
+      // free bit of the block was set and we have read the size of
+      // the block. Acquire and check the free bit again. If the
+      // block is still free, the read size is correct.
+      OrderAccess::acquire();
+
+      if (FreeChunk::indicatesFreeChunk(p)) {
+        _bt.split_block(p, pointer_delta(end, p), res);  // adjust block offset table
+        p += res;
+      }
+    } else {
+      // The barrier is required to prevent reordering of the free chunk check
+      // and the klass read.
+      OrderAccess::loadload();
+//      log_info(gc)("object at %p", p);
+      // Ensure klass read before size.
+      Klass* k = oop(p)->klass_or_null_acquire();
+      if (k != NULL) {
+        if (! k->is_klass()){
+          log_info(gc)("not klass, first two words: %lx, %lx", *(unsigned long*)p, *((unsigned long*)p+1));
+        }
+        assert(k->is_klass(), "Should really be klass oop.");
+        oop o = (oop)p;
+        assert(oopDesc::is_oop(o), "Should be an oop");
+        if (! oopDesc::is_oop(o)){
+          log_info(gc)("not oop, first two words: %lx, %lx", *(unsigned long*)p, *((unsigned long*)p+1));
+        }
+
+        size_t res = o->size_given_klass(k);
+        res = adjustObjectSize(res);
+        assert(res != 0, "Block size should not be 0");
+        _bt.split_block(p, pointer_delta(end, p), res);  // adjust block offset table
+        p += res;
+      } else {
+        // May return 0 if P-bits not present.
+        assert(false, "should not reach here");
+      }
+    }
+  }
+  assert(p == end, "not aligned");
+}
