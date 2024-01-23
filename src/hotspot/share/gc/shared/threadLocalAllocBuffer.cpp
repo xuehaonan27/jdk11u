@@ -32,6 +32,7 @@
 #include "runtime/threadSMR.hpp"
 #include "utilities/copy.hpp"
 #include "gc/cms/compactibleFreeListSpace.hpp"
+#include "gc/cms/cmsHeap.hpp"
 
 // Thread-Local Edens support
 
@@ -114,11 +115,19 @@ void ThreadLocalAllocBuffer::accumulate_statistics() {
   global_stats()->update_slow_allocations(_slow_allocations);
 }
 
+void ThreadLocalAllocBuffer::make_parsable_no_lock(bool retire, bool zap) {
+  make_parsable_work(retire, zap, false);
+}
+
+void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
+  make_parsable_work(retire, zap, true);
+}
+
 // Fills the current tlab with a dummy filler array to create
 // an illusion of a contiguous Eden and optionally retires the tlab.
 // Waste accounting should be done in caller as appropriate; see,
 // for example, clear_before_allocation().
-void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
+void ThreadLocalAllocBuffer::make_parsable_work(bool retire, bool zap, bool use_heap_lock) {
 //  log_info(gc)("make parsable of tlab %p in %p", this, myThread());
   if(retire){
   //  log_info(gc)("should retire");
@@ -140,7 +149,7 @@ void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
    }
     Universe::heap()->fill_with_dummy_object(top(), hard_end(), retire && zap);
    if (UseConcMarkSweepGC){
-     ((CMSHeap*)Universe::heap())->retireTLAB(start(), hard_end());
+     ((CMSHeap*)Universe::heap())->retireTLAB(start(), hard_end(), use_heap_lock);
    }
 
     if (retire || ZeroTLAB) {  // "Reset" the TLAB

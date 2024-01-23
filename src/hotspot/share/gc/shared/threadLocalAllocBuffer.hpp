@@ -138,6 +138,7 @@ private:
 
   static GlobalTLABStats* _global_stats;
   static GlobalTLABStats* global_stats() { return _global_stats; }
+  void make_parsable_work(bool retire, bool zap, bool use_heap_lock);
 
 public:
   ThreadLocalAllocBuffer() : _allocation_fraction(TLABAllocationWeight), _allocated_before_last_gc(0),
@@ -187,6 +188,7 @@ public:
 
   // Make an in-use tlab parsable, optionally retiring and/or zapping it.
   void make_parsable(bool retire, bool zap = true);
+  void make_parsable_no_lock(bool retire, bool zap = true);
 
   // Retire in-use tlab before allocation of a new tlab
   void clear_before_allocation();

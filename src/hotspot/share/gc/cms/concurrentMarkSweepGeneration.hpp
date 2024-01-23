@@ -1249,8 +1249,8 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
   // collection.
   void compute_new_size_free_list();
 
-  void retireTLAB(HeapWord* start, HeapWord* end) {
-    cmsSpace()->retireTLAB(start, end);
+  void retireTLAB(HeapWord* start, HeapWord* end, bool use_heap_lock) {
+    cmsSpace()->retireTLAB(start, end, use_heap_lock);
   }
 };
 

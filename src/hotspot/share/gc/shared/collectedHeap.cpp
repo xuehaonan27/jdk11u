@@ -500,7 +500,7 @@ void CollectedHeap::ensure_parsability(bool retire_tlabs) {
   BarrierSet *bs = BarrierSet::barrier_set();
   for (; JavaThread *thread = jtiwh.next(); ) {
      if (use_tlab){
-      thread->tlab().make_parsable(retire_tlabs);
+      thread->tlab().make_parsable_no_lock(retire_tlabs);
       thread->tlab().initialize();
      }
      bs->make_parsable(thread);

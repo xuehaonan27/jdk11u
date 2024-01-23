@@ -640,7 +640,7 @@ class CompactibleFreeListSpace: public CompactibleSpace {
   // than the desired number of free chunks.
   bool coalOverPopulated(size_t size);
 
-  void retireTLAB(HeapWord* start, HeapWord* end);
+  void retireTLAB(HeapWord* start, HeapWord* end, bool use_freelist_lock);
 
 // Record (for each size):
 //

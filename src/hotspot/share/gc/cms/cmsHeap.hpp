@@ -120,10 +120,15 @@ public:
   virtual size_t tlab_used(Thread* thr) const;
   virtual size_t unsafe_max_tlab_alloc(Thread* thr) const;
 
-  void retireTLAB(HeapWord* start, HeapWord* end) {
-    MutexLocker ml(Heap_lock);
-    MutexLockerEx x(freelistLock(), Mutex::_no_safepoint_check_flag);
-    old_gen()->retireTLAB(start, end);
+  void retireTLAB(HeapWord* start, HeapWord* end, bool use_heap_lock) {
+    if(use_heap_lock){
+      MutexLocker ml(Heap_lock);
+      old_gen()->retireTLAB(start, end, use_heap_lock);
+    }
+    else{
+      old_gen()->retireTLAB(start, end, use_heap_lock);
+    }
+    
   }
                                     
 

@@ -1230,7 +1230,7 @@ const {
 //      log_info(gc)("oop at %p", p);
     }
     // We must do this until we get a consistent view of the object.
-    log_info(gc)("block scan %p", p);
+    // log_info(gc)("block scan %p", p);
     if (FreeChunk::indicatesFreeChunk(p)) {
       volatile FreeChunk* fc = (volatile FreeChunk*)p;
       size_t res = fc->size();
@@ -1958,7 +1958,7 @@ CompactibleFreeListSpace::addChunkToFreeLists(HeapWord* chunk,
   // debug_only(fc->mangleFreed(size));
   //!!! must be deleted later!!!
   fc->mangleFreed(size);
-  log_info(gc)("add freechunk %p-%p", chunk, chunk+size);
+  // log_info(gc)("add freechunk %p-%p", chunk, chunk+size);
   if (size < SmallForDictionary) {
     returnChunkToFreeList(fc);
   } else {
@@ -3177,7 +3177,13 @@ initialize_sequential_subtasks_for_marking(int n_threads,
   pst->set_n_tasks((int)n_tasks);
 }
 
-void CompactibleFreeListSpace:: retireTLAB(HeapWord* start, HeapWord* end){
+void CompactibleFreeListSpace:: retireTLAB(HeapWord* start, HeapWord* end, bool use_freelist_lock){
+  // free
+  if (use_freelist_lock){
+    freelistLock()->lock_without_safepoint_check();
+    // MutexLockerEx x(, Mutex::_no_safepoint_check_flag);
+  }
+  // MutexLockerEx x(freelistLock(), Mutex::_no_safepoint_check_flag);
   HeapWord* p = start;
 
   while(p < end){
@@ -3226,4 +3232,9 @@ void CompactibleFreeListSpace:: retireTLAB(HeapWord* start, HeapWord* end){
     }
   }
   assert(p == end, "not aligned");
+
+    if (use_freelist_lock){
+    freelistLock()->unlock();
+    // MutexLockerEx x(, Mutex::_no_safepoint_check_flag);
+  }
 }
