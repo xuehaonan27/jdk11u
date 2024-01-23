@@ -249,37 +249,6 @@ void BarrierSetAssembler::tlab_allocate(MacroAssembler* masm,
 
   // update the tlab top pointer
   __ movptr(Address(thread, JavaThread::tlab_top_offset()), end);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
-  __ pop(t1);
 
   // recover var_size_in_bytes if necessary
   if (var_size_in_bytes == end) {

@@ -4003,7 +4003,7 @@ void TemplateTable::_new() {
   // This is done before loading InstanceKlass to be consistent with the order
   // how Constant Pool is updated (see ConstantPool::klass_at_put)
   const int tags_offset = Array<u1>::base_offset_in_bytes();
-  __ jmp(slow_case_no_pop);
+//  __ jmp(slow_case_no_pop);
   __ cmpb(Address(rax, rdx, Address::times_1, tags_offset), JVM_CONSTANT_Class);
   __ jcc(Assembler::notEqual, slow_case_no_pop);
 
@@ -4047,6 +4047,9 @@ void TemplateTable::_new() {
 #endif // _LP64
 
   if (UseTLAB) {
+    __ movq(rbx, 24);      // Load 24 into %rax
+    __ cmpq(rdx, rbx);     // Compare %rdx and %rax
+    __ cmovq(Assembler::positive, rbx, rdx);    // If %rdx is greater, move %rax into %rdx
     __ tlab_allocate(thread, rax, rdx, 0, rcx, rbx, slow_case);
     if (ZeroTLAB) {
       // the fields have been already cleared
