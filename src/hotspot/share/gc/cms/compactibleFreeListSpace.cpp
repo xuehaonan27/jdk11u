@@ -3199,7 +3199,12 @@ void CompactibleFreeListSpace:: retireTLAB(HeapWord* start, HeapWord* end, bool 
       OrderAccess::acquire();
 
       if (FreeChunk::indicatesFreeChunk(p)) {
-        _bt.split_block(p, pointer_delta(end, p), res);  // adjust block offset table
+        if(p + res < end){
+          _bt.split_block(p, pointer_delta(end, p), res);  // adjust block offset table
+        }
+        else{
+          assert(p + res == end, "not aligned");
+        }
         p += res;
       }
     } else {
@@ -3223,7 +3228,12 @@ void CompactibleFreeListSpace:: retireTLAB(HeapWord* start, HeapWord* end, bool 
         size_t res = o->size_given_klass(k);
         res = adjustObjectSize(res);
         assert(res != 0, "Block size should not be 0");
-        _bt.split_block(p, pointer_delta(end, p), res);  // adjust block offset table
+        if(p + res < end){
+          _bt.split_block(p, pointer_delta(end, p), res);  // adjust block offset table
+        }
+        else{
+          assert(p + res == end, "not aligned");
+        }
         p += res;
       } else {
         // May return 0 if P-bits not present.

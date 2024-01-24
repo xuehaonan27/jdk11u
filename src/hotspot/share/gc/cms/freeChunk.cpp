@@ -48,10 +48,6 @@ void FreeChunk::mangleAllocated(size_t size) {
   Copy::fill_to_words(addr + hdr, size - hdr, baadbabeHeapWord);
 }
 
-static void conditional_breakpoint2(){
-
-}
-
 void FreeChunk::mangleFreed(size_t sz) {
   assert(baadbabeHeapWord != deadbeefHeapWord, "Need distinct patterns");
   // mangle all but the header of a just-freed block of storage

@@ -83,17 +83,10 @@ private:
 
   }
 
-  void addr_hit(){
-
-  }
-
   static ThreadLocalAllocBuffer *watched;
 
   void set_top(HeapWord* top)                    { 
-    if (top == (void*)0x6b2f9e780){
-      watched = this;
-      addr_hit();
-    }
+    // assert(_top == _prev_top, "changed");
     if (_prev_top != NULL && top != NULL && _top != NULL){
       // assert(_prev_top == _top, "top changed");
       if(_prev_top != _top){
