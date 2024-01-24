@@ -197,6 +197,10 @@ void C1_MacroAssembler::allocate_object(Register obj, Register t1, Register t2, 
   assert_different_registers(obj, t1, t2); // XXX really?
   assert(header_size >= 0 && object_size >= header_size, "illegal sizes");
 
+  if (object_size < 3){
+    object_size = 3;
+  }
+
   try_allocate(obj, noreg, object_size * BytesPerWord, t1, t2, slow_case);
 
   initialize_object(obj, klass, noreg, object_size * HeapWordSize, t1, t2, UseTLAB);
@@ -269,6 +273,10 @@ void C1_MacroAssembler::allocate_array(Register obj, Register len, Register t1, 
   movptr(arr_size, (int32_t)header_size * BytesPerWord + MinObjAlignmentInBytesMask);
   lea(arr_size, Address(arr_size, len, f));
   andptr(arr_size, ~MinObjAlignmentInBytesMask);
+
+  movl(t1, 24);      // Load 24 into %rax
+  cmpq(t1, arr_size);     // Compare %rdx and %rax
+  cmovq(Assembler::positive, arr_size, t1);
 
   try_allocate(obj, arr_size, 0, t1, t2, slow_case);
 
