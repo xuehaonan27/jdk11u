@@ -1576,32 +1576,32 @@ void LIR_Assembler::emit_alloc_array(LIR_OpAllocArray* op) {
   Register len =  op->len()->as_register();
   LP64_ONLY( __ movslq(len, len); )
 
-//  if (UseSlowPath ||
-//      (!UseFastNewObjectArray && (op->type() == T_OBJECT || op->type() == T_ARRAY)) ||
-//      (!UseFastNewTypeArray   && (op->type() != T_OBJECT && op->type() != T_ARRAY))) {
+  if (UseSlowPath ||
+      (!UseFastNewObjectArray && (op->type() == T_OBJECT || op->type() == T_ARRAY)) ||
+      (!UseFastNewTypeArray   && (op->type() != T_OBJECT && op->type() != T_ARRAY))) {
     __ jmp(*op->stub()->entry());
-//  } else {
-//    Register tmp1 = op->tmp1()->as_register();
-//    Register tmp2 = op->tmp2()->as_register();
-//    Register tmp3 = op->tmp3()->as_register();
-//    if (len == tmp1) {
-//      tmp1 = tmp3;
-//    } else if (len == tmp2) {
-//      tmp2 = tmp3;
-//    } else if (len == tmp3) {
-//      // everything is ok
-//    } else {
-//      __ mov(tmp3, len);
-//    }
-//    __ allocate_array(op->obj()->as_register(),
-//                      len,
-//                      tmp1,
-//                      tmp2,
-//                      arrayOopDesc::header_size(op->type()),
-//                      array_element_size(op->type()),
-//                      op->klass()->as_register(),
-//                      *op->stub()->entry());
-//  }
+  } else {
+    Register tmp1 = op->tmp1()->as_register();
+    Register tmp2 = op->tmp2()->as_register();
+    Register tmp3 = op->tmp3()->as_register();
+    if (len == tmp1) {
+      tmp1 = tmp3;
+    } else if (len == tmp2) {
+      tmp2 = tmp3;
+    } else if (len == tmp3) {
+      // everything is ok
+    } else {
+      __ mov(tmp3, len);
+    }
+    __ allocate_array(op->obj()->as_register(),
+                      len,
+                      tmp1,
+                      tmp2,
+                      arrayOopDesc::header_size(op->type()),
+                      array_element_size(op->type()),
+                      op->klass()->as_register(),
+                      *op->stub()->entry());
+  }
   __ bind(*op->stub()->continuation());
 }
 

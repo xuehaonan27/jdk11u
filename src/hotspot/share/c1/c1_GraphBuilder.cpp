@@ -2184,18 +2184,18 @@ void GraphBuilder::new_object_array() {
 
 
 bool GraphBuilder::direct_compare(ciKlass* k) {
-//  if (k->is_loaded() && k->is_instance_klass() && !UseSlowPath) {
-//    ciInstanceKlass* ik = k->as_instance_klass();
-//    if (ik->is_final()) {
-//      return true;
-//    } else {
-//      if (DeoptC1 && UseCHA && !(ik->has_subklass() || ik->is_interface())) {
-//        // test class is leaf class
-//        dependency_recorder()->assert_leaf_type(ik);
-//        return true;
-//      }
-//    }
-//  }
+  if (k->is_loaded() && k->is_instance_klass() && !UseSlowPath) {
+    ciInstanceKlass* ik = k->as_instance_klass();
+    if (ik->is_final()) {
+      return true;
+    } else {
+      if (DeoptC1 && UseCHA && !(ik->has_subklass() || ik->is_interface())) {
+        // test class is leaf class
+        dependency_recorder()->assert_leaf_type(ik);
+        return true;
+      }
+    }
+  }
   return false;
 }
 
