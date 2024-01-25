@@ -2336,7 +2336,7 @@ define_pd_global(uint64_t,MaxRAM,                    1ULL*G);
           "given timeout in milliseconds")                                  \
           range(0, max_intx)                                                \
                                                                             \
-  product(intx, TieredStopAtLevel, 4,                                       \
+  product(intx, TieredStopAtLevel, 1,                                       \
           "Stop at given compilation level")                                \
           range(0, 4)                                                       \
                                                                             \
