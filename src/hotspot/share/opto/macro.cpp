@@ -1302,6 +1302,29 @@ void PhaseMacroExpand::expand_allocate_common(
   assert(ctrl != NULL, "must have control");
   // We need a Region and corresponding Phi's to merge the slow-path and fast-path results.
   // they will not be used if "always_slow" is set
+
+  if (UseConcMarkSweepGC){
+    ConLNode* min_chunk_in_bytes = ConLNode::make(24l);
+    Node* check = new CmpULNode(min_chunk_in_bytes, size_in_bytes);
+    Node* test  = new BoolNode(check, BoolTest::gt);
+
+
+    IfNode* iff = new IfNode(ctrl, test, PROB_MIN, COUNT_UNKNOWN);
+    Node *iff_true = new IfTrueNode( iff );
+    Node *iff_false = new IfFalseNode( iff );
+
+    Node* size_region = new RegionNode(3);
+    Node* size_phi = new PhiNode(size_region, Type::LONG);
+
+    size_region->init_req(1, iff_true);
+    size_region->init_req(2, iff_false);
+
+    size_phi->init_req(1, min_chunk_in_bytes);
+    size_phi->init_req(2, size_in_bytes);
+
+    size_in_bytes = size_phi;
+  }
+
   enum { slow_result_path = 1, fast_result_path = 2 };
   Node *result_region = NULL;
   Node *result_phi_rawmem = NULL;
@@ -1363,7 +1386,7 @@ void PhaseMacroExpand::expand_allocate_common(
     Node* eden_top_adr;
     Node* eden_end_adr;
 
-    set_eden_pointers(eden_top_adr, eden_end_adr);
+    set_eden_pointers(eden_top_adr, eden_end_adr); //hua: it seems that if UseTLAB, these two nodes represent the addr of tlab top and end
 
     // Load Eden::end.  Loop invariant and hoisted.
     //
