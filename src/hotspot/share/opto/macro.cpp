@@ -1304,17 +1304,23 @@ void PhaseMacroExpand::expand_allocate_common(
   // they will not be used if "always_slow" is set
 
   if (UseConcMarkSweepGC){
-    ConLNode* min_chunk_in_bytes = ConLNode::make(24l);
-    Node* check = new CmpULNode(min_chunk_in_bytes, size_in_bytes);
+    ConXNode* min_chunk_in_bytes = ConXNode::make(24l);
+    transform_later(min_chunk_in_bytes);
+    Node* check = new CmpXNode(min_chunk_in_bytes, size_in_bytes);
+    transform_later(check);
     Node* test  = new BoolNode(check, BoolTest::gt);
+    transform_later(test);
 
 
     IfNode* iff = new IfNode(ctrl, test, PROB_MIN, COUNT_UNKNOWN);
+    transform_later(iff);
     Node *iff_true = new IfTrueNode( iff );
+    transform_later(iff_true);
     Node *iff_false = new IfFalseNode( iff );
+    transform_later(iff_false);
 
     Node* size_region = new RegionNode(3);
-    Node* size_phi = new PhiNode(size_region, Type::LONG);
+    Node* size_phi = new PhiNode(size_region, TypeX_X);
 
     size_region->init_req(1, iff_true);
     size_region->init_req(2, iff_false);
@@ -1322,7 +1328,11 @@ void PhaseMacroExpand::expand_allocate_common(
     size_phi->init_req(1, min_chunk_in_bytes);
     size_phi->init_req(2, size_in_bytes);
 
+    transform_later(size_region);
+    transform_later(size_phi);
+
     size_in_bytes = size_phi;
+    ctrl = size_region;
   }
 
   enum { slow_result_path = 1, fast_result_path = 2 };
