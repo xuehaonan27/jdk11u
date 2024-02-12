@@ -1955,9 +1955,9 @@ CompactibleFreeListSpace::addChunkToFreeLists(HeapWord* chunk,
 
   FreeChunk* fc = (FreeChunk*) chunk;
   fc->set_size(size);
-  // debug_only(fc->mangleFreed(size));
-  //!!! must be deleted later!!!
-  fc->mangleFreed(size);
+  debug_only(fc->mangleFreed(size));
+  //!!!hua: must be deleted later!!!
+  // fc->mangleFreed(size);
   // log_info(gc)("add freechunk %p-%p", chunk, chunk+size);
   if (size < SmallForDictionary) {
     returnChunkToFreeList(fc);
