@@ -108,15 +108,15 @@ void GCConfig::fail_if_unsupported_gc_is_selected() {
 void GCConfig::select_gc_ergonomically() {
   if (os::is_server_class_machine()) {
 #if INCLUDE_G1GC
-    FLAG_SET_ERGO_IF_DEFAULT(bool, UseConcMarkSweepGC, true);
+    FLAG_SET_ERGO(bool, UseConcMarkSweepGC, true);
 #elif INCLUDE_PARALLELGC
-    FLAG_SET_ERGO_IF_DEFAULT(bool, UseParallelGC, true);
+    FLAG_SET_ERGO(bool, UseParallelGC, true);
 #elif INCLUDE_SERIALGC
-    FLAG_SET_ERGO_IF_DEFAULT(bool, UseSerialGC, true);
+    FLAG_SET_ERGO(bool, UseSerialGC, true);
 #endif
   } else {
 #if INCLUDE_SERIALGC
-    FLAG_SET_ERGO_IF_DEFAULT(bool, UseSerialGC, true);
+    FLAG_SET_ERGO(bool, UseSerialGC, true);
 #endif
   }
 }
@@ -153,7 +153,14 @@ GCArguments* GCConfig::select_gc() {
   // Fail immediately if an unsupported GC is selected
   fail_if_unsupported_gc_is_selected();
 
-  if (is_no_gc_selected()) {
+
+  FOR_EACH_SUPPORTED_GC(gc) {
+    if (gc->_flag) {
+      gc->_flag = false;
+    }
+  }
+
+  // if (is_no_gc_selected()) {
     // Try select GC ergonomically
     select_gc_ergonomically();
 
@@ -165,7 +172,7 @@ GCArguments* GCConfig::select_gc() {
 
     // Succeeded to select GC ergonomically
     _gc_selected_ergonomically = true;
-  }
+  // }
 
   if (!is_exactly_one_gc_selected()) {
     // More than one GC selected
