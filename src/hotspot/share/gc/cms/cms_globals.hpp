@@ -204,7 +204,10 @@
           "Size (in cards) of CMS parallel rescan task")                    \
           range(1, SIZE_MAX / 4096)                                         \
           constraint(CMSRescanMultipleConstraintFunc,AfterMemoryInit)       \
-                                                                            \
+  product(size_t, CMSSweepingMultiple, 131072,                              \
+          "Size (in cards) of CMS parallel rescan task")                    \
+          range(1, SIZE_MAX / 4096)                                         \
+          constraint(CMSSweepingMultipleConstraintFunc,AfterMemoryInit)     \
   /* 4096 = CardTable::card_size_in_words * BitsPerWord */                  \
   product(size_t, CMSConcMarkMultiple, 32,                                  \
           "Size (in cards) of CMS concurrent MT marking task")              \

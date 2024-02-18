@@ -334,6 +334,8 @@ CompactibleFreeListSpace::CompactibleFreeListSpace(BlockOffsetSharedArray* bs, M
                           Monitor::_safepoint_check_never),
   _rescan_task_size(CardTable::card_size_in_words * BitsPerWord *
                     CMSRescanMultiple),
+  _sweeping_task_size(CardTable::card_size_in_words * BitsPerWord *
+                      CMSSweepingMultiple),
   _marking_task_size(CardTable::card_size_in_words * BitsPerWord *
                     CMSConcMarkMultiple),
   _collector(NULL),
@@ -966,6 +968,14 @@ void CompactibleFreeListSpace::blk_iterate_careful(BlkClosureCareful* cl) {
   assert_lock_strong(freelistLock());
   HeapWord *cur, *limit;
   for (cur = bottom(), limit = end(); cur < limit;
+       cur += cl->do_blk_careful(cur));
+}
+
+void CompactibleFreeListSpace::blk_iterate_careful(BlkClosureCareful* cl, HeapWord* start, HeapWord* end) {
+  assert_lock_strong(freelistLock());
+  HeapWord *cur, *limit;
+  assert(start >= bottom() && end <= end(), "incorrect range");
+  for (cur = start, limit = end; cur < limit;
        cur += cl->do_blk_careful(cur));
 }
 
@@ -3127,6 +3137,27 @@ initialize_sequential_subtasks_for_rescan(int n_threads) {
   assert(n_tasks == 0 ||
          ((used_region().start() + (n_tasks - 1)*task_size < used_region().end()) &&
           (used_region().start() + n_tasks*task_size >= used_region().end())),
+         "n_tasks calculation incorrect");
+  SequentialSubTasksDone* pst = conc_par_seq_tasks();
+  assert(!pst->valid(), "Clobbering existing data?");
+  // Sets the condition for completion of the subtask (how many threads
+  // need to finish in order to be done).
+  pst->set_n_threads(n_threads);
+  pst->set_n_tasks((int)n_tasks);
+}
+
+void
+CompactibleFreeListSpace::
+initialize_sequential_subtasks_for_sweeping(int n_threads) {
+  // The "size" of each task is fixed according to rescan_task_size.
+  assert(n_threads > 0, "Unexpected n_threads argument");
+  const size_t task_size = sweeping_task_size();
+  MemRegion _used_region(used_region().start(), sweep_limit());
+  size_t n_tasks = (_used_region.word_size() + task_size - 1)/task_size;
+  assert((n_tasks == 0) == _used_region.is_empty(), "n_tasks incorrect");
+  assert(n_tasks == 0 ||
+         ((_used_region.start() + (n_tasks - 1)*task_size < _used_region.end()) &&
+          (_used_region.start() + n_tasks*task_size >= _used_region.end())),
          "n_tasks calculation incorrect");
   SequentialSubTasksDone* pst = conc_par_seq_tasks();
   assert(!pst->valid(), "Clobbering existing data?");

@@ -124,6 +124,7 @@ class CompactibleFreeListSpace: public CompactibleSpace {
   // initialize_sequential_subtasks_for_rescan() which modifies
   // par_seq_tasks which also lives in Space. XXX
   const size_t _rescan_task_size;
+  const size_t _sweeping_task_size;
   const size_t _marking_task_size;
 
   // Yet another sequential tasks done structure. This supports
@@ -383,11 +384,13 @@ class CompactibleFreeListSpace: public CompactibleSpace {
 
   // Support for parallelization of rescan and marking.
   const size_t rescan_task_size()  const { return _rescan_task_size;  }
+  const size_t sweeping_task_size() const { return _sweeping_task_size; }
   const size_t marking_task_size() const { return _marking_task_size; }
   // Return ergonomic max size for CMSRescanMultiple and CMSConcMarkMultiple.
   const size_t max_flag_size_for_task_size() const;
   SequentialSubTasksDone* conc_par_seq_tasks() {return &_conc_par_seq_tasks; }
   void initialize_sequential_subtasks_for_rescan(int n_threads);
+  void initialize_sequential_subtasks_for_sweeping(int n_threads);
   void initialize_sequential_subtasks_for_marking(int n_threads,
          HeapWord* low = NULL);
 
@@ -484,6 +487,7 @@ class CompactibleFreeListSpace: public CompactibleSpace {
 
   void blk_iterate(BlkClosure* cl);
   void blk_iterate_careful(BlkClosureCareful* cl);
+  void blk_iterate_careful(BlkClosureCareful* cl, HeapWord* start, HeapWord* end);
   HeapWord* block_start_const(const void* p) const;
   HeapWord* block_start_careful(const void* p) const;
   size_t block_size(const HeapWord* p) const;

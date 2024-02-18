@@ -1691,7 +1691,7 @@ class SweepClosure: public BlkClosureCareful {
 
  public:
   SweepClosure(CMSCollector* collector, ConcurrentMarkSweepGeneration* g,
-               CMSBitMap* bitMap, bool should_yield);
+               CMSBitMap* bitMap, HeapWord* limit, bool should_yield);
   ~SweepClosure() PRODUCT_RETURN;
 
   size_t       do_blk_careful(HeapWord* addr);

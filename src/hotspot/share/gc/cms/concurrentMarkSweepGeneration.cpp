@@ -2848,6 +2848,176 @@ class CMSParMarkTask : public AbstractGangTask {
   void work_on_young_gen_roots(OopsInGenClosure* cl);
 };
 
+class CMSParSweepingTask : public AbstractGangTask {
+protected:
+    CMSCollector*     _collector;
+    uint              _n_workers;
+
+public:
+    CMSParSweepingTask(CMSCollector* collector,
+    CompactibleFreeListSpace* cms_space,
+            uint n_workers, WorkGang* workers,
+            OopTaskQueueSet* task_queues,
+    StrongRootsScope* strong_roots_scope):
+    AbstractGangTask(name),
+    _collector(collector),
+    _n_workers(n_workers),
+    _cms_space(cms_space),
+    _task_queues(task_queues),
+    _freelistLock(cms_space->freelistLock()) { }
+//    _term(n_workers, task_queues){ }
+
+    OopTaskQueueSet* task_queues() { return _task_queues; }
+
+    OopTaskQueue* work_queue(int i) { return task_queues()->queue(i); }
+
+//    ParallelTaskTerminator* terminator() { return &_term; }
+    uint n_workers() { return _n_workers; }
+
+    void work(uint worker_id);
+private:
+    void do_sweeping(int i, CompactibleFreeListSpace* sp);
+};
+
+void CMSParSweepingTask::work(uint worker_id) {
+  elapsedTimer _timer;
+  ResourceMark rm;
+  HandleMark hm;
+
+//  DEBUG_ONLY(_collector->verify_overflow_empty();)
+
+  // Before we begin work, our work queue should be empty
+//  assert(work_queue(worker_id)->size() == 0, "Expected to be empty");
+  // Scan the bitmap covering _cms_space, tracing through grey objects.
+  _timer.start();
+  do_sweeping(worker_id, _cms_space);
+  _timer.stop();
+  log_trace(gc, task)("Finished cms space scanning in %dth thread: %3.3f sec", worker_id, _timer.seconds());
+
+//  // ... do work stealing
+//  _timer.reset();
+//  _timer.start();
+//  do_work_steal(worker_id);
+//  _timer.stop();
+//  log_trace(gc, task)("Finished work stealing in %dth thread: %3.3f sec", worker_id, _timer.seconds());
+//  assert(_collector->_markStack.isEmpty(), "Should have been emptied");
+//  assert(work_queue(worker_id)->size() == 0, "Should have been emptied");
+//  // Note that under the current task protocol, the
+//  // following assertion is true even of the spaces
+//  // expanded since the completion of the concurrent
+//  // marking. XXX This will likely change under a strict
+//  // ABORT semantics.
+//  // After perm removal the comparison was changed to
+//  // greater than or equal to from strictly greater than.
+//  // Before perm removal the highest address sweep would
+//  // have been at the end of perm gen but now is at the
+//  // end of the tenured gen.
+//  assert(_global_finger >=  _cms_space->end(),
+//         "All tasks have been completed");
+//  DEBUG_ONLY(_collector->verify_overflow_empty();)
+}
+
+void CMSConcMarkingTask::do_sweeping(int i, CompactibleFreeListSpace* sp) {
+  SequentialSubTasksDone* pst = sp->conc_par_seq_tasks();
+  int n_tasks = pst->n_tasks();
+  // We allow that there may be no tasks to do here because
+  // we are restarting after a stack overflow.
+  assert(pst->valid() || n_tasks == 0, "Uninitialized use?");
+  uint nth_task = 0;
+
+  HeapWord* aligned_start = sp->bottom();
+//  if (sp->used_region().contains(_restart_addr)) {
+//    // Align down to a card boundary for the start of 0th task
+//    // for this space.
+//    aligned_start = align_down(_restart_addr, CardTable::card_size);
+//  }
+
+  size_t chunk_size = sp->sweeping_task_size();
+  while (!pst->is_task_claimed(/* reference */ nth_task)) {
+    // Having claimed the nth task in this space,
+    // compute the chunk that it corresponds to:
+    MemRegion span = MemRegion(aligned_start + nth_task*chunk_size,
+                               aligned_start + (nth_task+1)*chunk_size);
+    // Try and bump the global finger via a CAS;
+    // note that we need to do the global finger bump
+    // _before_ taking the intersection below, because
+    // the task corresponding to that region will be
+    // deemed done even if the used_region() expands
+    // because of allocation -- as it almost certainly will
+    // during start-up while the threads yield in the
+    // closure below.
+//    HeapWord* finger = span.end();
+//    bump_global_finger(finger);   // atomically
+    // There are null tasks here corresponding to chunks
+    // beyond the "top" address of the space.
+    span = span.intersection(sp->used_region());
+    if (!span.is_empty()) {  // Non-null task
+      HeapWord* prev_obj;
+//      assert(!span.contains(_restart_addr) || nth_task == 0,
+//             "Inconsistency");
+      if (nth_task == 0) {
+        // For the 0th task, we'll not need to compute a block_start.
+//        if (span.contains(_restart_addr)) {
+//          // In the case of a restart because of stack overflow,
+//          // we might additionally skip a chunk prefix.
+//          prev_obj = _restart_addr;
+//        } else {
+          prev_obj = span.start();
+//        }
+      } else {
+        // We want to skip the first object because
+        // the protocol is to scan any object in its entirety
+        // that _starts_ in this span; a fortiori, any
+        // object starting in an earlier span is scanned
+        // as part of an earlier claimed task.
+        // Below we use the "careful" version of block_start
+        // so we do not try to navigate uninitialized objects.
+        _freelistLock->lock();
+        prev_obj = sp->block_start_careful(span.start());
+        // Below we use a variant of block_size that uses the
+        // Printezis bits to avoid waiting for allocated
+        // objects to become initialized/parsable.
+        while (prev_obj < span.start()) {
+          size_t sz = sp->block_size_no_stall(prev_obj, _collector);
+          if (sz > 0) {
+            prev_obj += sz;
+          } else {
+            // In this case we may end up doing a bit of redundant
+            // scanning, but that appears unavoidable, short of
+            // locking the free list locks; see bug 6324141.
+            assert(false, "Should not reach here");
+            ShouldNotReachHere();
+            break;
+          }
+        }
+        _freelistLock->unlock();
+      }
+      if (prev_obj < span.end()) {
+        MemRegion my_span = MemRegion(prev_obj, span.end());
+        // Do the marking work within a non-empty span --
+        // the last argument to the constructor indicates whether the
+        // iteration should be incremental with periodic yields.
+        SweepClosure sweepClosure(_collector, sp, _collector->markBitMap(), my_span.end(), CMSYield);//hua: here?
+        old_gen->cmsSpace()->blk_iterate_careful(&sweepClosure);
+//        ParMarkFromRootsClosure cl(this, _collector, my_span,
+//                                   &_collector->_markBitMap,
+//                                   work_queue(i),
+//                                   &_collector->_markStack);
+//        _collector->_markBitMap.iterate(&cl, my_span.start(), my_span.end());
+      } // else nothing to do for this task
+    }   // else nothing to do for this task
+  }
+  // We'd be tempted to assert here that since there are no
+  // more tasks left to claim in this space, the global_finger
+  // must exceed space->top() and a fortiori space->end(). However,
+  // that would not quite be correct because the bumping of
+  // global_finger occurs strictly after the claiming of a task,
+  // so by the time we reach here the global finger may not yet
+  // have been bumped up by the thread that claimed the last
+  // task.
+  pst->all_tasks_completed();
+}
+
 // Parallel initial mark task
 class CMSParInitialMarkTask: public CMSParMarkTask {
   StrongRootsScope* _strong_roots_scope;
@@ -5356,8 +5526,9 @@ void CMSCollector::sweep() {
     CMSPhaseAccounting pa(this, "Concurrent Sweep");
     // First sweep the old gen
     {
-      CMSTokenSyncWithLocks ts(true, _cmsGen->freelistLock(),
-                               bitMapLock());
+//      CMSTokenSyncWithLocks ts(true, _cmsGen->freelistLock(),
+//                               bitMapLock());
+      CMSTokenSyncWithLocks ts(true, bitMapLock());
       sweepWork(_cmsGen);//hua
     }
 
@@ -5495,7 +5666,7 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
   // check that we hold the requisite locks
 //  assert(have_cms_token(), "Should hold cms token");
 //  assert(ConcurrentMarkSweepThread::cms_thread_has_cms_token(), "Should possess CMS token to sweep");
-  assert_lock_strong(old_gen->freelistLock());
+//  assert_lock_strong(old_gen->freelistLock());
   assert_lock_strong(bitMapLock());
 
   assert(!_inter_sweep_timer.is_active(), "Was switched off in an outer context");
@@ -5506,12 +5677,24 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
   old_gen->setNearLargestChunk();
 
   {
-    SweepClosure sweepClosure(this, old_gen, &_markBitMap, CMSYield);//hua: here?
-    old_gen->cmsSpace()->blk_iterate_careful(&sweepClosure);
-    // We need to free-up/coalesce garbage/blocks from a
-    // co-terminal free run. This is done in the SweepClosure
-    // destructor; so, do not remove this scope, else the
-    // end-of-sweep-census below will be off by a little bit.
+    CMSHeap* heap = CMSHeap::heap();
+    WorkGang* workers = heap->workers();
+    assert(workers != NULL, "Need parallel worker threads.");
+    // Choose to use the number of GC workers most recently set
+    // into "active_workers".
+    uint n_workers = workers->active_workers();
+
+    CompactibleFreeListSpace* cms_space  = _cmsGen->cmsSpace();
+
+    CMSParSweepingTask tsk(this, cms_space, n_workers, workers, task_queues());
+
+    cms_space->initialize_sequential_subtasks_for_sweeping(n_workers);
+
+    if (n_workers > 1) {
+      workers->run_task(&tsk);
+    } else {
+      tsk.work(0);
+    }
   }
   old_gen->cmsSpace()->sweep_completed();
   old_gen->cmsSpace()->endSweepFLCensus(sweep_count());
@@ -7042,11 +7225,11 @@ void MarkFromDirtyCardsClosure::do_MemRegion(MemRegion mr) {
 
 SweepClosure::SweepClosure(CMSCollector* collector,
                            ConcurrentMarkSweepGeneration* g,
-                           CMSBitMap* bitMap, bool should_yield) :
+                           CMSBitMap* bitMap, HeapWord* limit, bool should_yield) :
   _collector(collector),
   _g(g),
   _sp(g->cmsSpace()),
-  _limit(_sp->sweep_limit()),
+  _limit(limit),
   _freelistLock(_sp->freelistLock()),
   _bitMap(bitMap),
   _yield(should_yield),
@@ -7202,7 +7385,7 @@ size_t SweepClosure::do_blk_careful(HeapWord* addr) {
 
   assert(addr < _limit, "sweep invariant");
   // check if we should yield
-  do_yield_check(addr);
+//  do_yield_check(addr);
   if (fc->is_free()) {
     // Chunk that is already free
     res = fc->size();
@@ -7412,6 +7595,8 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
   bool coalesce = false;
   const size_t left  = pointer_delta(fc_addr, freeFinger());
   const size_t right = chunkSize;
+
+  _freelistLock->lock();
   switch (FLSCoalescePolicy) {
     // numeric value forms a coalition aggressiveness metric
     case 0:  { // never coalesce
@@ -7468,9 +7653,11 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
         "The chunk has the wrong size or is not in the free lists");
       _sp->removeFreeChunkFromFreeLists(fc);
     }
+    _freelistLock->unlock();
     set_lastFreeRangeCoalesced(true);
     print_free_block_coalesced(fc);
   } else {  // not in a free range and/or should not coalesce
+    _freelistLock->unlock();
     // Return the current free range and start a new one.
     if (inFreeRange()) {
       // In a free range but cannot coalesce with the right hand chunk.
@@ -7534,11 +7721,14 @@ void SweepClosure::flush_cur_free_chunk(HeapWord* chunk, size_t size) {
     // was removed so add it back.
     // If the current free range was coalesced, then the death
     // of the free range was recorded.  Record a birth now.
+
+    _freelistLock->lock();
     if (lastFreeRangeCoalesced()) {
       _sp->coalBirth(size);
     }
     _sp->addChunkAndRepairOffsetTable(chunk, size,
             lastFreeRangeCoalesced());
+    _freelistLock->unlock();
   } else {
     log_develop_trace(gc, sweep)("Already in free list: nothing to flush");
   }

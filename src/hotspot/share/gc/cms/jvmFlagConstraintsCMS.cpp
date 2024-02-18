@@ -160,6 +160,22 @@ JVMFlag::Error CMSRescanMultipleConstraintFunc(size_t value, bool verbose) {
   return status;
 }
 
+JVMFlag::Error CMSSweepingMultipleConstraintFunc(size_t value, bool verbose) {
+  JVMFlag::Error status = CMSReservedAreaConstraintFunc("CMSSweepingMultiple", value, verbose);
+
+  if (status == JVMFlag::SUCCESS && UseConcMarkSweepGC) {
+    if (value % HeapWordSize != 0) {
+      JVMFlag::printError(verbose,
+                          "CMSSweepingMultiple (" SIZE_FORMAT ") must be "
+                                                            "a multiple of " SIZE_FORMAT "\n",
+              value, HeapWordSize);
+      status = JVMFlag::VIOLATES_CONSTRAINT;
+    }
+  }
+
+  return status;
+}
+
 JVMFlag::Error CMSConcMarkMultipleConstraintFunc(size_t value, bool verbose) {
   return CMSReservedAreaConstraintFunc("CMSConcMarkMultiple", value, verbose);
 }
