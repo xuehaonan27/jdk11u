@@ -34,6 +34,7 @@ JVMFlag::Error ParGCCardsPerStrideChunkConstraintFunc(intx value, bool verbose);
 JVMFlag::Error CMSOldPLABMinConstraintFunc(size_t value, bool verbose);
 JVMFlag::Error CMSOldPLABMaxConstraintFunc(size_t value, bool verbose);
 JVMFlag::Error CMSRescanMultipleConstraintFunc(size_t value, bool verbose);
+JVMFlag::Error CMSSweepingMultipleConstraintFunc(size_t value, bool verbose);
 JVMFlag::Error CMSConcMarkMultipleConstraintFunc(size_t value, bool verbose);
 JVMFlag::Error CMSPrecleanDenominatorConstraintFunc(uintx value, bool verbose);
 JVMFlag::Error CMSPrecleanNumeratorConstraintFunc(uintx value, bool verbose);

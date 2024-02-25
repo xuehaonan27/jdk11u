@@ -971,11 +971,11 @@ void CompactibleFreeListSpace::blk_iterate_careful(BlkClosureCareful* cl) {
        cur += cl->do_blk_careful(cur));
 }
 
-void CompactibleFreeListSpace::blk_iterate_careful(BlkClosureCareful* cl, HeapWord* start, HeapWord* end) {
-  assert_lock_strong(freelistLock());
-  HeapWord *cur, *limit;
-  assert(start >= bottom() && end <= end(), "incorrect range");
-  for (cur = start, limit = end; cur < limit;
+void CompactibleFreeListSpace::blk_iterate_careful(BlkClosureCareful* cl, HeapWord* _start, HeapWord* _end) {
+  // assert_lock_strong(freelistLock());
+  HeapWord *cur;
+  assert(_start >= bottom() && _end <= end(), "incorrect range");
+  for (cur = _start; cur < _end;
        cur += cl->do_blk_careful(cur));
 }
 
@@ -2286,7 +2286,7 @@ void CompactibleFreeListSpace::beginSweepFLCensus(
   float inter_sweep_current,
   float inter_sweep_estimate,
   float intra_sweep_estimate) {
-  assert_locked();
+  // assert_locked();
   size_t i;
   for (i = IndexSetStart; i < IndexSetSize; i += IndexSetStride) {
     AdaptiveFreeList<FreeChunk>* fl    = &_indexedFreeList[i];

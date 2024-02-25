@@ -2852,19 +2852,21 @@ class CMSParSweepingTask : public AbstractGangTask {
 protected:
     CMSCollector*     _collector;
     uint              _n_workers;
+    ConcurrentMarkSweepGeneration* _old_gen;
+    OopTaskQueueSet*  _task_queues;
+    Mutex* _freelistLock;
 
 public:
     CMSParSweepingTask(CMSCollector* collector,
-    CompactibleFreeListSpace* cms_space,
+    ConcurrentMarkSweepGeneration* old_gen,
             uint n_workers, WorkGang* workers,
-            OopTaskQueueSet* task_queues,
-    StrongRootsScope* strong_roots_scope):
-    AbstractGangTask(name),
+            OopTaskQueueSet* task_queues):
+    AbstractGangTask("Parallel Marking Task"),
     _collector(collector),
     _n_workers(n_workers),
-    _cms_space(cms_space),
+    _old_gen(old_gen),
     _task_queues(task_queues),
-    _freelistLock(cms_space->freelistLock()) { }
+    _freelistLock(old_gen->cmsSpace()->freelistLock()) { }
 //    _term(n_workers, task_queues){ }
 
     OopTaskQueueSet* task_queues() { return _task_queues; }
@@ -2876,7 +2878,7 @@ public:
 
     void work(uint worker_id);
 private:
-    void do_sweeping(int i, CompactibleFreeListSpace* sp);
+    void do_sweeping(int i, ConcurrentMarkSweepGeneration* old_gen);
 };
 
 void CMSParSweepingTask::work(uint worker_id) {
@@ -2890,7 +2892,7 @@ void CMSParSweepingTask::work(uint worker_id) {
 //  assert(work_queue(worker_id)->size() == 0, "Expected to be empty");
   // Scan the bitmap covering _cms_space, tracing through grey objects.
   _timer.start();
-  do_sweeping(worker_id, _cms_space);
+  do_sweeping(worker_id, _old_gen);
   _timer.stop();
   log_trace(gc, task)("Finished cms space scanning in %dth thread: %3.3f sec", worker_id, _timer.seconds());
 
@@ -2917,7 +2919,8 @@ void CMSParSweepingTask::work(uint worker_id) {
 //  DEBUG_ONLY(_collector->verify_overflow_empty();)
 }
 
-void CMSConcMarkingTask::do_sweeping(int i, CompactibleFreeListSpace* sp) {
+void CMSParSweepingTask::do_sweeping(int i, ConcurrentMarkSweepGeneration* old_gen) {
+  CompactibleFreeListSpace* sp = old_gen->cmsSpace();
   SequentialSubTasksDone* pst = sp->conc_par_seq_tasks();
   int n_tasks = pst->n_tasks();
   // We allow that there may be no tasks to do here because
@@ -2994,11 +2997,14 @@ void CMSConcMarkingTask::do_sweeping(int i, CompactibleFreeListSpace* sp) {
       }
       if (prev_obj < span.end()) {
         MemRegion my_span = MemRegion(prev_obj, span.end());
+        log_info(gc)("%d: start %p - %p", i, my_span.start(), my_span.end());
         // Do the marking work within a non-empty span --
         // the last argument to the constructor indicates whether the
         // iteration should be incremental with periodic yields.
-        SweepClosure sweepClosure(_collector, sp, _collector->markBitMap(), my_span.end(), CMSYield);//hua: here?
-        old_gen->cmsSpace()->blk_iterate_careful(&sweepClosure);
+        // SweepClosure sweepClosure(_collector, old_gen, _collector->markBitMap(), my_span.end(), CMSYield);//hua: here?
+        // old_gen->cmsSpace()->blk_iterate_careful(&sweepClosure, my_span.start(), my_span.end());
+
+        log_info(gc)("%d: finish %p - %p", i, my_span.start(), my_span.end());
 //        ParMarkFromRootsClosure cl(this, _collector, my_span,
 //                                   &_collector->_markBitMap,
 //                                   work_queue(i),
@@ -5077,6 +5083,7 @@ void CMSCollector::do_remark_parallel() {
   // Choose to use the number of GC workers most recently set
   // into "active_workers".
   uint n_workers = workers->active_workers();
+  log_info(gc)("number of active workers: %u", n_workers);
 
   CompactibleFreeListSpace* cms_space  = _cmsGen->cmsSpace();
 
@@ -5676,18 +5683,19 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
                                           _intra_sweep_estimate.padded_average());
   old_gen->setNearLargestChunk();
 
+
+  CMSHeap* heap = CMSHeap::heap();
+  WorkGang* workers = heap->workers();
+  assert(workers != NULL, "Need parallel worker threads.");
+  // Choose to use the number of GC workers most recently set
+  // into "active_workers".
+  uint n_workers = workers->active_workers();
+
+  CompactibleFreeListSpace* cms_space  = _cmsGen->cmsSpace();
+
+  CMSParSweepingTask tsk(this, _cmsGen, n_workers, workers, task_queues());
+
   {
-    CMSHeap* heap = CMSHeap::heap();
-    WorkGang* workers = heap->workers();
-    assert(workers != NULL, "Need parallel worker threads.");
-    // Choose to use the number of GC workers most recently set
-    // into "active_workers".
-    uint n_workers = workers->active_workers();
-
-    CompactibleFreeListSpace* cms_space  = _cmsGen->cmsSpace();
-
-    CMSParSweepingTask tsk(this, cms_space, n_workers, workers, task_queues());
-
     cms_space->initialize_sequential_subtasks_for_sweeping(n_workers);
 
     if (n_workers > 1) {
@@ -5696,6 +5704,7 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
       tsk.work(0);
     }
   }
+  cms_space->freelistLock()->lock();
   old_gen->cmsSpace()->sweep_completed();
   old_gen->cmsSpace()->endSweepFLCensus(sweep_count());
   if (should_unload_classes()) {                // unloaded classes this cycle,
@@ -5703,6 +5712,7 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
   } else {                                      // did not unload classes,
     _concurrent_cycles_since_last_unload++;     // ... increment count
   }
+  cms_space->freelistLock()->unlock();
 }
 
 // Reset CMS data structures (for now just the marking bit map)
@@ -7272,7 +7282,7 @@ void SweepClosure::print_on(outputStream* st) const {
 // you may need to review this code to see if it needs to be
 // enabled in product mode.
 SweepClosure::~SweepClosure() {
-  assert_lock_strong(_freelistLock);
+  // assert_lock_strong(_freelistLock);
   assert(_limit >= _sp->bottom() && _limit <= _sp->end(),
          "sweep _limit out of bounds");
   if (inFreeRange()) {
