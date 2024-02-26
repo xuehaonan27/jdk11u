@@ -70,6 +70,71 @@ class ParNewGeneration;
 class PromotionInfo;
 class ScanMarkedObjectsAgainCarefullyClosure;
 class SerialOldTracer;
+class SweepOp;
+class CMSParSweepingTask;
+
+typedef GenericTaskQueue<SweepOp, mtGC>    SweepTaskQueue;
+typedef GenericTaskQueueSet<SweepTaskQueue, mtGC> SweepTaskQueueSet;
+
+class SweepOp: public StackObj {
+public:
+     enum OpType {
+        ADD_CHUNK, REMOVE_CHUNK, ADD_CHUNK_WITH_BIRTH, REMOVE_CHUNK_WITH_DEATH
+    };
+public:
+    OpType _op_type;
+    HeapWord* _start;
+    size_t _size;
+
+    SweepOp(){}
+
+
+    SweepOp(OpType op_type, HeapWord* start,  size_t size):
+    _op_type(op_type),
+    _start(start),
+    _size(size){ }
+
+    volatile SweepOp& operator=(const volatile SweepOp& op) volatile {
+      this->_op_type = op._op_type;
+      this->_start = op._start;
+      this->_size = op._size;
+      return *this;
+    }
+
+    void do_operation(CompactibleFreeListSpace* _sp);
+};
+
+class CMSParSweepingTask : public AbstractGangTask {
+protected:
+    CMSCollector*     _collector;
+    uint              _n_workers;
+    ConcurrentMarkSweepGeneration* _old_gen;
+    OopTaskQueueSet*  _task_queues;
+    Mutex* _freelistLock;
+    SweepTaskQueueSet* _sweep_task_queues;
+
+public:
+    CMSParSweepingTask(CMSCollector* collector,
+    ConcurrentMarkSweepGeneration* old_gen,
+            uint n_workers, WorkGang* workers,
+            OopTaskQueueSet* task_queues);
+//    _term(n_workers, task_queues){ }
+
+    OopTaskQueueSet* task_queues() { return _task_queues; }
+
+    OopTaskQueue* work_queue(int i) { return task_queues()->queue(i); }
+
+    SweepTaskQueue* sweep_queue(int i) { return _sweep_task_queues->queue(i); }
+
+//    ParallelTaskTerminator* terminator() { return &_term; }
+    uint n_workers() { return _n_workers; }
+
+    void work(uint worker_id);
+    void do_operations(int i);
+
+private:
+    void do_sweeping(int i, ConcurrentMarkSweepGeneration* old_gen);
+};
 
 // A generic CMS bit map. It's the basis for both the CMS marking bit map
 // as well as for the mod union table (in each case only a subset of the
@@ -1643,6 +1708,7 @@ class SweepClosure: public BlkClosureCareful {
                                         // of the "left hand chunk
   SweepTaskQueue*                 _queue;
   CMSParSweepingTask*             _parent;
+  int                             _i;
 
   NOT_PRODUCT(
     size_t                       _numObjectsFreed;
@@ -1667,6 +1733,11 @@ class SweepClosure: public BlkClosureCareful {
   size_t do_garbage_chunk(FreeChunk *fc);
   // Process a live chunk during sweeping.
   size_t do_live_chunk(FreeChunk* fc);
+
+  void do_operations();
+  void add_chunk(HeapWord* chunk, size_t size);
+  void add_chunk_with_birth(HeapWord* chunk, size_t size);
+  void remove_chunk_with_death(HeapWord* chunk, size_t size);
 
   // Accessors.
   HeapWord* freeFinger() const          { return _freeFinger; }
@@ -1695,7 +1766,7 @@ class SweepClosure: public BlkClosureCareful {
   SweepTaskQueue* work_queue(){ return _queue; }
 
  public:
-  SweepClosure(CMSParSweepingTask* parent, CMSCollector* collector, ConcurrentMarkSweepGeneration* g,
+  SweepClosure(CMSParSweepingTask* parent, int i, CMSCollector* collector, ConcurrentMarkSweepGeneration* g,
                CMSBitMap* bitMap, HeapWord* limit, bool should_yield, SweepTaskQueue* queue);
   ~SweepClosure() PRODUCT_RETURN;
 

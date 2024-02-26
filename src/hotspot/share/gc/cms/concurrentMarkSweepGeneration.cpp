@@ -2848,28 +2848,11 @@ class CMSParMarkTask : public AbstractGangTask {
   void work_on_young_gen_roots(OopsInGenClosure* cl);
 };
 
-class SweepOp: public StackObj {
-    public enum OpType {
-        ADD_CHUNK, REMOVE_CHUNK, ADD_CHUNK_WITH_BIRTH, REMOVE_CHUNK_WITH_DEATH
-    };
-public:
-    OpType _op_type;
-    HeapWord* _start;
-    size_t _size;
 
-
-    SweepOp(OpType op_type, HeapWord* start,  size_t size):
-    _op_type(op_type),
-    _start(start),
-    _size(size){ }
-
-    void do_operation();
-};
-
-void SweeOp::do_operation(CompactibleFreeListSpace* _sp){
+void SweepOp::do_operation(CompactibleFreeListSpace* _sp){
     switch(_op_type){
       case ADD_CHUNK_WITH_BIRTH:
-        _sp->coalBirth(op._size);
+        _sp->coalBirth(_size);
         _sp->addChunkAndRepairOffsetTable(_start, _size,
                                           true);
         break;
@@ -2879,72 +2862,44 @@ void SweeOp::do_operation(CompactibleFreeListSpace* _sp){
         break;
       case REMOVE_CHUNK_WITH_DEATH:
         _sp->coalDeath(_size);
-        _sp->removeFreeChunkFromFreeLists(_start);
+        _sp->removeFreeChunkFromFreeLists((FreeChunk*)_start);
         break;
     }
 }
 
-typedef GenericTaskQueue<SweepOp, mtGC>    SweepTaskQueue;
-typedef GenericTaskQueueSet<SweepOp, mtGC> SweepTaskQueueSet;
+CMSParSweepingTask::CMSParSweepingTask(CMSCollector* collector,
+ConcurrentMarkSweepGeneration* old_gen,
+        uint n_workers, WorkGang* workers,
+        OopTaskQueueSet* task_queues):
+AbstractGangTask("Parallel Marking Task"),
+_collector(collector),
+_n_workers(n_workers),
+_old_gen(old_gen),
+_task_queues(task_queues),
+_freelistLock(old_gen->cmsSpace()->freelistLock()) {
+  uint i;
+  uint num_queues = MAX2(ParallelGCThreads, ConcGCThreads);
 
-class CMSParSweepingTask : public AbstractGangTask {
-protected:
-    CMSCollector*     _collector;
-    uint              _n_workers;
-    ConcurrentMarkSweepGeneration* _old_gen;
-    OopTaskQueueSet*  _task_queues;
-    Mutex* _freelistLock;
-    SweepTaskQueueSet* _sweep_task_queues;
+  _sweep_task_queues = new SweepTaskQueueSet(num_queues);
+  if (_sweep_task_queues == NULL) {
+    log_warning(gc)("sweep task_queues allocation failure.");
+    return;
+  }
 
-public:
-    CMSParSweepingTask(CMSCollector* collector,
-    ConcurrentMarkSweepGeneration* old_gen,
-            uint n_workers, WorkGang* workers,
-            OopTaskQueueSet* task_queues):
-    AbstractGangTask("Parallel Marking Task"),
-    _collector(collector),
-    _n_workers(n_workers),
-    _old_gen(old_gen),
-    _task_queues(task_queues),
-    _freelistLock(old_gen->cmsSpace()->freelistLock()) {
-      uint i;
-      uint num_queues = MAX2(ParallelGCThreads, ConcGCThreads);
-
-      _sweep_task_queues = new SweepTaskQueueSet(num_queues);
-      if (sweep_task_queues == NULL) {
-        log_warning(gc)("sweep task_queues allocation failure.");
-        return;
-      }
-      _hash_seed = NEW_C_HEAP_ARRAY(int, num_queues, mtGC);
-      typedef Padded<SweepTaskQueue> PaddedSweepTaskQueue;
-      for (i = 0; i < num_queues; i++) {
-        PaddedSweepTaskQueue *q = new PaddedSweepTaskQueue();
-        if (q == NULL) {
-          log_warning(gc)("work_queue allocation failure.");
-          return;
-        }
-        _sweep_task_queues->register_queue(i, q);
-      }
-      for (i = 0; i < num_queues; i++) {
-        _sweep_task_queues->queue(i)->initialize();
-        _hash_seed[i] = 17;  // copied from ParNew
-      }
+  typedef Padded<SweepTaskQueue> PaddedSweepTaskQueue;
+  for (i = 0; i < num_queues; i++) {
+    PaddedSweepTaskQueue *q = new PaddedSweepTaskQueue();
+    if (q == NULL) {
+      log_warning(gc)("work_queue allocation failure.");
+      return;
     }
-//    _term(n_workers, task_queues){ }
+    _sweep_task_queues->register_queue(i, q);
+  }
+  for (i = 0; i < num_queues; i++) {
+    _sweep_task_queues->queue(i)->initialize();
 
-    OopTaskQueueSet* task_queues() { return _task_queues; }
-
-    OopTaskQueue* work_queue(int i) { return task_queues()->queue(i); }
-
-    SweepTaskQueue* sweep_queue(int i) { return _sweep_task_queues->queues(i); }
-
-//    ParallelTaskTerminator* terminator() { return &_term; }
-    uint n_workers() { return _n_workers; }
-
-    void work(uint worker_id);
-private:
-    void do_sweeping(int i, ConcurrentMarkSweepGeneration* old_gen);
-};
+  }
+}
 
 void CMSParSweepingTask::work(uint worker_id) {
   elapsedTimer _timer;
@@ -2984,11 +2939,11 @@ void CMSParSweepingTask::work(uint worker_id) {
 //  DEBUG_ONLY(_collector->verify_overflow_empty();)
 }
 
-void CMSParSweepingTask::do_operations(){
+void CMSParSweepingTask::do_operations(int i){
   SweepOp op;
   _freelistLock->lock();
-  while(work_queue()->pop_global(op)){
-    op.do_operation();
+  while(sweep_queue(i)->pop_global(op)){
+    // op.do_operation(_old_gen->cmsSpace());
   }
   _freelistLock->unlock();
 }
@@ -3075,7 +3030,7 @@ void CMSParSweepingTask::do_sweeping(int i, ConcurrentMarkSweepGeneration* old_g
         // Do the marking work within a non-empty span --
         // the last argument to the constructor indicates whether the
         // iteration should be incremental with periodic yields.
-         SweepClosure sweepClosure(this, _collector, old_gen, _collector->markBitMap(), my_span.end(), CMSYield,
+         SweepClosure sweepClosure(this, i, _collector, old_gen, _collector->markBitMap(), my_span.end(), CMSYield,
                                    sweep_queue(i));//hua: here?
          old_gen->cmsSpace()->blk_iterate_careful(&sweepClosure, my_span.start(), my_span.end());
 
@@ -3089,7 +3044,7 @@ void CMSParSweepingTask::do_sweeping(int i, ConcurrentMarkSweepGeneration* old_g
     }   // else nothing to do for this task
   }
 
-  do_operations();
+  do_operations(i);
 
   // We'd be tempted to assert here that since there are no
   // more tasks left to claim in this space, the global_finger
@@ -7311,10 +7266,12 @@ void MarkFromDirtyCardsClosure::do_MemRegion(MemRegion mr) {
   _space->object_iterate_mem(mr, &_scan_cl);
 }
 
-SweepClosure::SweepClosure(CMSCollector* collector,
+SweepClosure::SweepClosure(CMSParSweepingTask* parent, int i, CMSCollector* collector,
                            ConcurrentMarkSweepGeneration* g,
                            CMSBitMap* bitMap, HeapWord* limit, bool should_yield, SweepTaskQueue* queue) :
   _collector(collector),
+  _parent(parent),
+  _i(i),
   _g(g),
   _sp(g->cmsSpace()),
   _limit(limit),
@@ -7739,7 +7696,7 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
       }
 //      _sp->coalDeath(ffc->size());
 //      _sp->removeFreeChunkFromFreeLists(ffc);
-      remove_chunk_with_death(ffc, ffc->size());
+      remove_chunk_with_death((HeapWord*)ffc, ffc->size());
       set_freeRangeInFreeLists(false);
     }
     if (fcInFreeLists) {
@@ -7747,7 +7704,7 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
       assert(fc->size() == chunkSize,
         "The chunk has the wrong size or is not in the free lists");
 //      _sp->removeFreeChunkFromFreeLists(fc);
-      remove_chunk_with_death(fc, chunkSize);
+      remove_chunk_with_death((HeapWord*)fc, chunkSize);
     }
 //    _freelistLock->unlock();
     set_lastFreeRangeCoalesced(true);
@@ -7801,25 +7758,38 @@ void SweepClosure::lookahead_and_flush(FreeChunk* fc, size_t chunk_size) {
 }
 
 void SweepClosure::do_operations(){
-  _parent->do_operaitons();
+  _parent->do_operations(_i);
 }
 
 void SweepClosure::add_chunk(HeapWord* chunk, size_t size) {
-  if(!work_queue()->push(SweepOp(ADD_CHUNK, chunk, size))){
-    do_operations();
-  }
+  _freelistLock->lock();
+  _sp->coalBirth(size);
+  _sp->addChunkAndRepairOffsetTable(chunk, size,
+                                    true);
+  _freelistLock->unlock();
+  // if(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK, chunk, size))){
+  //   do_operations();
+  // }
 }
 
 void SweepClosure::add_chunk_with_birth(HeapWord* chunk, size_t size) {
-  if(!work_queue()->push(SweepOp(ADD_CHUNK_WITH_BIRTH, chunk, size))){
-    do_operations();
-  }
+  _freelistLock->lock();
+  _sp->addChunkAndRepairOffsetTable(chunk, size,
+                                          false);
+  _freelistLock->unlock();
+  // if(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK_WITH_BIRTH, chunk, size))){
+  //   do_operations();
+  // }
 }
 
 void SweepClosure::remove_chunk_with_death(HeapWord* chunk, size_t size){
-  if(!work_queue()->push(SweepOp(REMOVE_CHUNK_WITH_DEATH, chunk, size))){
-    do_operations();
-  }
+  _freelistLock->lock();
+  _sp->coalDeath(size);
+  _sp->removeFreeChunkFromFreeLists((FreeChunk*)chunk);
+  _freelistLock->unlock();
+  // if(!work_queue()->push(SweepOp(SweepOp::REMOVE_CHUNK_WITH_DEATH, chunk, size))){
+  //   do_operations();
+  // }
 }
 
 
