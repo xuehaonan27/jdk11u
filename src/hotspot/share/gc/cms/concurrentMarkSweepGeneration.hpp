@@ -1640,7 +1640,10 @@ class SweepClosure: public BlkClosureCareful {
   size_t                         _freeRangeSize;
                                         // When _inFreeRange is set, this
                                         // indicates the accumulated size
-                                        // of the "left hand chunk"
+                                        // of the "left hand chunk
+  SweepTaskQueue*                 _queue;
+  CMSParSweepingTask*             _parent;
+
   NOT_PRODUCT(
     size_t                       _numObjectsFreed;
     size_t                       _numWordsFreed;
@@ -1689,9 +1692,11 @@ class SweepClosure: public BlkClosureCareful {
   // Debugging/Printing
   void print_free_block_coalesced(FreeChunk* fc) const;
 
+  SweepTaskQueue* work_queue(){ return _queue; }
+
  public:
-  SweepClosure(CMSCollector* collector, ConcurrentMarkSweepGeneration* g,
-               CMSBitMap* bitMap, HeapWord* limit, bool should_yield);
+  SweepClosure(CMSParSweepingTask* parent, CMSCollector* collector, ConcurrentMarkSweepGeneration* g,
+               CMSBitMap* bitMap, HeapWord* limit, bool should_yield, SweepTaskQueue* queue);
   ~SweepClosure() PRODUCT_RETURN;
 
   size_t       do_blk_careful(HeapWord* addr);

@@ -2848,6 +2848,45 @@ class CMSParMarkTask : public AbstractGangTask {
   void work_on_young_gen_roots(OopsInGenClosure* cl);
 };
 
+class SweepOp: public StackObj {
+    public enum OpType {
+        ADD_CHUNK, REMOVE_CHUNK, ADD_CHUNK_WITH_BIRTH, REMOVE_CHUNK_WITH_DEATH
+    };
+public:
+    OpType _op_type;
+    HeapWord* _start;
+    size_t _size;
+
+
+    SweepOp(OpType op_type, HeapWord* start,  size_t size):
+    _op_type(op_type),
+    _start(start),
+    _size(size){ }
+
+    void do_operation();
+};
+
+void SweeOp::do_operation(CompactibleFreeListSpace* _sp){
+    switch(_op_type){
+      case ADD_CHUNK_WITH_BIRTH:
+        _sp->coalBirth(op._size);
+        _sp->addChunkAndRepairOffsetTable(_start, _size,
+                                          true);
+        break;
+      case ADD_CHUNK:
+        _sp->addChunkAndRepairOffsetTable(_start, _size,
+                                          false);
+        break;
+      case REMOVE_CHUNK_WITH_DEATH:
+        _sp->coalDeath(_size);
+        _sp->removeFreeChunkFromFreeLists(_start);
+        break;
+    }
+}
+
+typedef GenericTaskQueue<SweepOp, mtGC>    SweepTaskQueue;
+typedef GenericTaskQueueSet<SweepOp, mtGC> SweepTaskQueueSet;
+
 class CMSParSweepingTask : public AbstractGangTask {
 protected:
     CMSCollector*     _collector;
@@ -2855,6 +2894,7 @@ protected:
     ConcurrentMarkSweepGeneration* _old_gen;
     OopTaskQueueSet*  _task_queues;
     Mutex* _freelistLock;
+    SweepTaskQueueSet* _sweep_task_queues;
 
 public:
     CMSParSweepingTask(CMSCollector* collector,
@@ -2866,12 +2906,37 @@ public:
     _n_workers(n_workers),
     _old_gen(old_gen),
     _task_queues(task_queues),
-    _freelistLock(old_gen->cmsSpace()->freelistLock()) { }
+    _freelistLock(old_gen->cmsSpace()->freelistLock()) {
+      uint i;
+      uint num_queues = MAX2(ParallelGCThreads, ConcGCThreads);
+
+      _sweep_task_queues = new SweepTaskQueueSet(num_queues);
+      if (sweep_task_queues == NULL) {
+        log_warning(gc)("sweep task_queues allocation failure.");
+        return;
+      }
+      _hash_seed = NEW_C_HEAP_ARRAY(int, num_queues, mtGC);
+      typedef Padded<SweepTaskQueue> PaddedSweepTaskQueue;
+      for (i = 0; i < num_queues; i++) {
+        PaddedSweepTaskQueue *q = new PaddedSweepTaskQueue();
+        if (q == NULL) {
+          log_warning(gc)("work_queue allocation failure.");
+          return;
+        }
+        _sweep_task_queues->register_queue(i, q);
+      }
+      for (i = 0; i < num_queues; i++) {
+        _sweep_task_queues->queue(i)->initialize();
+        _hash_seed[i] = 17;  // copied from ParNew
+      }
+    }
 //    _term(n_workers, task_queues){ }
 
     OopTaskQueueSet* task_queues() { return _task_queues; }
 
     OopTaskQueue* work_queue(int i) { return task_queues()->queue(i); }
+
+    SweepTaskQueue* sweep_queue(int i) { return _sweep_task_queues->queues(i); }
 
 //    ParallelTaskTerminator* terminator() { return &_term; }
     uint n_workers() { return _n_workers; }
@@ -2917,6 +2982,15 @@ void CMSParSweepingTask::work(uint worker_id) {
 //  assert(_global_finger >=  _cms_space->end(),
 //         "All tasks have been completed");
 //  DEBUG_ONLY(_collector->verify_overflow_empty();)
+}
+
+void CMSParSweepingTask::do_operations(){
+  SweepOp op;
+  _freelistLock->lock();
+  while(work_queue()->pop_global(op)){
+    op.do_operation();
+  }
+  _freelistLock->unlock();
 }
 
 void CMSParSweepingTask::do_sweeping(int i, ConcurrentMarkSweepGeneration* old_gen) {
@@ -3001,8 +3075,9 @@ void CMSParSweepingTask::do_sweeping(int i, ConcurrentMarkSweepGeneration* old_g
         // Do the marking work within a non-empty span --
         // the last argument to the constructor indicates whether the
         // iteration should be incremental with periodic yields.
-        // SweepClosure sweepClosure(_collector, old_gen, _collector->markBitMap(), my_span.end(), CMSYield);//hua: here?
-        // old_gen->cmsSpace()->blk_iterate_careful(&sweepClosure, my_span.start(), my_span.end());
+         SweepClosure sweepClosure(this, _collector, old_gen, _collector->markBitMap(), my_span.end(), CMSYield,
+                                   sweep_queue(i));//hua: here?
+         old_gen->cmsSpace()->blk_iterate_careful(&sweepClosure, my_span.start(), my_span.end());
 
         log_info(gc)("%d: finish %p - %p", i, my_span.start(), my_span.end());
 //        ParMarkFromRootsClosure cl(this, _collector, my_span,
@@ -3013,6 +3088,9 @@ void CMSParSweepingTask::do_sweeping(int i, ConcurrentMarkSweepGeneration* old_g
       } // else nothing to do for this task
     }   // else nothing to do for this task
   }
+
+  do_operations();
+
   // We'd be tempted to assert here that since there are no
   // more tasks left to claim in this space, the global_finger
   // must exceed space->top() and a fortiori space->end(). However,
@@ -7235,7 +7313,7 @@ void MarkFromDirtyCardsClosure::do_MemRegion(MemRegion mr) {
 
 SweepClosure::SweepClosure(CMSCollector* collector,
                            ConcurrentMarkSweepGeneration* g,
-                           CMSBitMap* bitMap, HeapWord* limit, bool should_yield) :
+                           CMSBitMap* bitMap, HeapWord* limit, bool should_yield, SweepTaskQueue* queue) :
   _collector(collector),
   _g(g),
   _sp(g->cmsSpace()),
@@ -7246,7 +7324,8 @@ SweepClosure::SweepClosure(CMSCollector* collector,
   _inFreeRange(false),           // No free range at beginning of sweep
   _freeRangeInFreeLists(false),  // No free range at beginning of sweep
   _lastFreeRangeCoalesced(false),
-  _freeFinger(g->used_region().start())
+  _freeFinger(g->used_region().start()),
+  _queue(queue)
 {
   NOT_PRODUCT(
     _numObjectsFreed = 0;
@@ -7606,41 +7685,46 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
   const size_t left  = pointer_delta(fc_addr, freeFinger());
   const size_t right = chunkSize;
 
-  _freelistLock->lock();
-  switch (FLSCoalescePolicy) {
-    // numeric value forms a coalition aggressiveness metric
-    case 0:  { // never coalesce
-      coalesce = false;
-      break;
-    }
-    case 1: { // coalesce if left & right chunks on overpopulated lists
-      coalesce = _sp->coalOverPopulated(left) &&
-                 _sp->coalOverPopulated(right);
-      break;
-    }
-    case 2: { // coalesce if left chunk on overpopulated list (default)
-      coalesce = _sp->coalOverPopulated(left);
-      break;
-    }
-    case 3: { // coalesce if left OR right chunk on overpopulated list
-      coalesce = _sp->coalOverPopulated(left) ||
-                 _sp->coalOverPopulated(right);
-      break;
-    }
-    case 4: { // always coalesce
-      coalesce = true;
-      break;
-    }
-    default:
-     ShouldNotReachHere();
-  }
+//  _freelistLock->lock();
+  coalesce = true;
+//  switch (FLSCoalescePolicy) {
+//    // numeric value forms a coalition aggressiveness metric
+//    case 0:  { // never coalesce
+//      coalesce = false;
+//      break;
+//    }
+//    case 1: { // coalesce if left & right chunks on overpopulated lists
+//      coalesce = _sp->coalOverPopulated(left) &&
+//                 _sp->coalOverPopulated(right);
+//      break;
+//    }
+//    case 2: { // coalesce if left chunk on overpopulated list (default)
+//      coalesce = _sp->coalOverPopulated(left);
+//      break;
+//    }
+//    case 3: { // coalesce if left OR right chunk on overpopulated list
+//      coalesce = _sp->coalOverPopulated(left) ||
+//                 _sp->coalOverPopulated(right);
+//      break;
+//    }
+//    case 4: { // always coalesce
+//      coalesce = true;
+//      break;
+//    }
+//    default:
+//     ShouldNotReachHere();
+//  }
 
   // Should the current free range be coalesced?
   // If the chunk is in a free range and either we decided to coalesce above
   // or the chunk is near the large block at the end of the heap
   // (isNearLargestChunk() returns true), then coalesce this chunk.
-  const bool doCoalesce = inFreeRange()
-                          && (coalesce || _g->isNearLargestChunk(fc_addr));
+
+//  const bool doCoalesce = inFreeRange()
+//                          && (coalesce || _g->isNearLargestChunk(fc_addr));
+
+  const bool doCoalesce = true;
+
   if (doCoalesce) {
     // Coalesce the current free range on the left with the new
     // chunk on the right.  If either is on a free list,
@@ -7653,21 +7737,23 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
         assert(_sp->verify_chunk_in_free_list(ffc),
                "Chunk is not in free lists");
       }
-      _sp->coalDeath(ffc->size());
-      _sp->removeFreeChunkFromFreeLists(ffc);
+//      _sp->coalDeath(ffc->size());
+//      _sp->removeFreeChunkFromFreeLists(ffc);
+      remove_chunk_with_death(ffc, ffc->size());
       set_freeRangeInFreeLists(false);
     }
     if (fcInFreeLists) {
-      _sp->coalDeath(chunkSize);
+//      _sp->coalDeath(chunkSize);
       assert(fc->size() == chunkSize,
         "The chunk has the wrong size or is not in the free lists");
-      _sp->removeFreeChunkFromFreeLists(fc);
+//      _sp->removeFreeChunkFromFreeLists(fc);
+      remove_chunk_with_death(fc, chunkSize);
     }
-    _freelistLock->unlock();
+//    _freelistLock->unlock();
     set_lastFreeRangeCoalesced(true);
     print_free_block_coalesced(fc);
   } else {  // not in a free range and/or should not coalesce
-    _freelistLock->unlock();
+//    _freelistLock->unlock();
     // Return the current free range and start a new one.
     if (inFreeRange()) {
       // In a free range but cannot coalesce with the right hand chunk.
@@ -7714,6 +7800,29 @@ void SweepClosure::lookahead_and_flush(FreeChunk* fc, size_t chunk_size) {
   }
 }
 
+void SweepClosure::do_operations(){
+  _parent->do_operaitons();
+}
+
+void SweepClosure::add_chunk(HeapWord* chunk, size_t size) {
+  if(!work_queue()->push(SweepOp(ADD_CHUNK, chunk, size))){
+    do_operations();
+  }
+}
+
+void SweepClosure::add_chunk_with_birth(HeapWord* chunk, size_t size) {
+  if(!work_queue()->push(SweepOp(ADD_CHUNK_WITH_BIRTH, chunk, size))){
+    do_operations();
+  }
+}
+
+void SweepClosure::remove_chunk_with_death(HeapWord* chunk, size_t size){
+  if(!work_queue()->push(SweepOp(REMOVE_CHUNK_WITH_DEATH, chunk, size))){
+    do_operations();
+  }
+}
+
+
 void SweepClosure::flush_cur_free_chunk(HeapWord* chunk, size_t size) {
   assert(inFreeRange(), "Should only be called if currently in a free range.");
   assert(size > 0,
@@ -7732,13 +7841,16 @@ void SweepClosure::flush_cur_free_chunk(HeapWord* chunk, size_t size) {
     // If the current free range was coalesced, then the death
     // of the free range was recorded.  Record a birth now.
 
-    _freelistLock->lock();
+//    _freelistLock->lock();
     if (lastFreeRangeCoalesced()) {
-      _sp->coalBirth(size);
+//      _sp->coalBirth(size);
+      add_chunk_with_birth(chunk, size);
+    } else {
+      add_chunk(chunk, size);
     }
-    _sp->addChunkAndRepairOffsetTable(chunk, size,
-            lastFreeRangeCoalesced());
-    _freelistLock->unlock();
+//    _sp->addChunkAndRepairOffsetTable(chunk, size,
+//            lastFreeRangeCoalesced());
+//    _freelistLock->unlock();
   } else {
     log_develop_trace(gc, sweep)("Already in free list: nothing to flush");
   }
