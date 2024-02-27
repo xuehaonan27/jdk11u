@@ -2943,7 +2943,7 @@ void CMSParSweepingTask::do_operations(int i){
   SweepOp op;
   _freelistLock->lock();
   while(sweep_queue(i)->pop_global(op)){
-    // op.do_operation(_old_gen->cmsSpace());
+    op.do_operation(_old_gen->cmsSpace());
   }
   _freelistLock->unlock();
 }
@@ -7642,7 +7642,6 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
   const size_t left  = pointer_delta(fc_addr, freeFinger());
   const size_t right = chunkSize;
 
-//  _freelistLock->lock();
   coalesce = true;
 //  switch (FLSCoalescePolicy) {
 //    // numeric value forms a coalition aggressiveness metric
@@ -7677,10 +7676,14 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
   // or the chunk is near the large block at the end of the heap
   // (isNearLargestChunk() returns true), then coalesce this chunk.
 
-//  const bool doCoalesce = inFreeRange()
-//                          && (coalesce || _g->isNearLargestChunk(fc_addr));
+  // const bool doCoalesce = inFreeRange()
+  //                        && (coalesce || _g->isNearLargestChunk(fc_addr));
 
-  const bool doCoalesce = true;
+  const bool doCoalesce = inFreeRange() && coalesce;
+  
+  // _freelistLock->lock();
+
+  // const bool doCoalesce = true;
 
   if (doCoalesce) {
     // Coalesce the current free range on the left with the new
@@ -7694,23 +7697,23 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
         assert(_sp->verify_chunk_in_free_list(ffc),
                "Chunk is not in free lists");
       }
-//      _sp->coalDeath(ffc->size());
-//      _sp->removeFreeChunkFromFreeLists(ffc);
+    //  _sp->coalDeath(ffc->size());
+    //  _sp->removeFreeChunkFromFreeLists(ffc);
       remove_chunk_with_death((HeapWord*)ffc, ffc->size());
       set_freeRangeInFreeLists(false);
     }
     if (fcInFreeLists) {
-//      _sp->coalDeath(chunkSize);
+    //  _sp->coalDeath(chunkSize);
       assert(fc->size() == chunkSize,
         "The chunk has the wrong size or is not in the free lists");
-//      _sp->removeFreeChunkFromFreeLists(fc);
+    //  _sp->removeFreeChunkFromFreeLists(fc);
       remove_chunk_with_death((HeapWord*)fc, chunkSize);
     }
-//    _freelistLock->unlock();
+  //  _freelistLock->unlock();
     set_lastFreeRangeCoalesced(true);
     print_free_block_coalesced(fc);
   } else {  // not in a free range and/or should not coalesce
-//    _freelistLock->unlock();
+  //  _freelistLock->unlock();
     // Return the current free range and start a new one.
     if (inFreeRange()) {
       // In a free range but cannot coalesce with the right hand chunk.
@@ -7762,34 +7765,34 @@ void SweepClosure::do_operations(){
 }
 
 void SweepClosure::add_chunk(HeapWord* chunk, size_t size) {
-  _freelistLock->lock();
-  _sp->coalBirth(size);
-  _sp->addChunkAndRepairOffsetTable(chunk, size,
-                                    true);
-  _freelistLock->unlock();
-  // if(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK, chunk, size))){
-  //   do_operations();
-  // }
+  // _freelistLock->lock();
+  // _sp->addChunkAndRepairOffsetTable(chunk, size,
+  //                                       false);
+  // _freelistLock->unlock();
+  if(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK, chunk, size))){
+    do_operations();
+  }
 }
 
 void SweepClosure::add_chunk_with_birth(HeapWord* chunk, size_t size) {
-  _freelistLock->lock();
-  _sp->addChunkAndRepairOffsetTable(chunk, size,
-                                          false);
-  _freelistLock->unlock();
-  // if(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK_WITH_BIRTH, chunk, size))){
-  //   do_operations();
-  // }
+  // _freelistLock->lock();
+  // _sp->coalBirth(size);
+  // _sp->addChunkAndRepairOffsetTable(chunk, size,
+  //                                   true);
+  // _freelistLock->unlock();
+  if(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK_WITH_BIRTH, chunk, size))){
+    do_operations();
+  }
 }
 
 void SweepClosure::remove_chunk_with_death(HeapWord* chunk, size_t size){
-  _freelistLock->lock();
-  _sp->coalDeath(size);
-  _sp->removeFreeChunkFromFreeLists((FreeChunk*)chunk);
-  _freelistLock->unlock();
-  // if(!work_queue()->push(SweepOp(SweepOp::REMOVE_CHUNK_WITH_DEATH, chunk, size))){
-  //   do_operations();
-  // }
+  // _freelistLock->lock();
+  // _sp->coalDeath(size);
+  // _sp->removeFreeChunkFromFreeLists((FreeChunk*)chunk);
+  // _freelistLock->unlock();
+  if(!work_queue()->push(SweepOp(SweepOp::REMOVE_CHUNK_WITH_DEATH, chunk, size))){
+    do_operations();
+  }
 }
 
 
@@ -7811,16 +7814,17 @@ void SweepClosure::flush_cur_free_chunk(HeapWord* chunk, size_t size) {
     // If the current free range was coalesced, then the death
     // of the free range was recorded.  Record a birth now.
 
-//    _freelistLock->lock();
+  //  _freelistLock->lock();
     if (lastFreeRangeCoalesced()) {
-//      _sp->coalBirth(size);
+    //  _sp->coalBirth(size);
       add_chunk_with_birth(chunk, size);
-    } else {
+    } 
+    else {
       add_chunk(chunk, size);
     }
-//    _sp->addChunkAndRepairOffsetTable(chunk, size,
-//            lastFreeRangeCoalesced());
-//    _freelistLock->unlock();
+  //  _sp->addChunkAndRepairOffsetTable(chunk, size,
+  //          lastFreeRangeCoalesced());
+  //  _freelistLock->unlock();
   } else {
     log_develop_trace(gc, sweep)("Already in free list: nothing to flush");
   }
