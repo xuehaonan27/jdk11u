@@ -364,8 +364,8 @@ HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const 
 
   
   tlab.fill(mem, mem + CompactibleFreeListSpace::adjustObjectSize(_word_size), allocation._allocated_tlab_size);
-  log_info(gc)("tlab fill during allocation, tlab: %p, start: %p, top: %p, end: %p, hard_end: %p", &tlab,
-      tlab.start(), tlab.top(), tlab.end(), tlab.hard_end());
+  // log_info(gc)("tlab fill during allocation, tlab: %p, start: %p, top: %p, end: %p, hard_end: %p", &tlab,
+  //     tlab.start(), tlab.top(), tlab.end(), tlab.hard_end());
   return mem;
 }
 

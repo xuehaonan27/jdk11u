@@ -140,13 +140,13 @@ void ThreadLocalAllocBuffer::make_parsable_work(bool retire, bool zap, bool use_
       myThread()->incr_allocated_bytes(used_bytes());
     }
 
-   log_info(gc)("fill in tlab %p top: %p, hard end: %p", this, top(), hard_end());
-   if(CompactibleFreeListSpace::adjustObjectSize(pointer_delta(hard_end(), top())) == pointer_delta(hard_end(), top())){
-      log_info(gc)("equals");
-   }
-   else {
-    log_info(gc)("not equal");
-   }
+  //  log_info(gc)("fill in tlab %p top: %p, hard end: %p", this, top(), hard_end());
+  //  if(CompactibleFreeListSpace::adjustObjectSize(pointer_delta(hard_end(), top())) == pointer_delta(hard_end(), top())){
+  //     log_info(gc)("equals");
+  //  }
+  //  else {
+  //   log_info(gc)("not equal");
+  //  }
     Universe::heap()->fill_with_dummy_object(top(), hard_end(), retire && zap);
    if (UseConcMarkSweepGC){
      ((CMSHeap*)Universe::heap())->retireTLAB(start(), hard_end(), use_heap_lock);
