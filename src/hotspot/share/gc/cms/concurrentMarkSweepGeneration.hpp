@@ -131,6 +131,7 @@ public:
 
     void work(uint worker_id);
     void do_operations(int i);
+    void do_region_merging();
 
 private:
     void do_sweeping(int i, ConcurrentMarkSweepGeneration* old_gen);

@@ -2948,6 +2948,113 @@ void CMSParSweepingTask::do_operations(int i){
   _freelistLock->unlock();
 }
 
+void CMSParSweepingTask::do_region_merging() {
+  CompactibleFreeListSpace* sp = _old_gen->cmsSpace();
+  SequentialSubTasksDone* pst = sp->conc_par_seq_tasks();
+  int n_tasks = pst->n_tasks();
+  // We allow that there may be no tasks to do here because
+  // we are restarting after a stack overflow.
+  assert(pst->valid() || n_tasks == 0, "Uninitialized use?");
+  uint nth_task = 0;
+
+  HeapWord* aligned_start = sp->bottom();
+//  if (sp->used_region().contains(_restart_addr)) {
+//    // Align down to a card boundary for the start of 0th task
+//    // for this space.
+//    aligned_start = align_down(_restart_addr, CardTable::card_size);
+//  }
+
+  size_t chunk_size = sp->sweeping_task_size();
+  while (!pst->is_task_claimed(/* reference */ nth_task)) {
+    // Having claimed the nth task in this space,
+    // compute the chunk that it corresponds to:
+    MemRegion span = MemRegion(aligned_start + nth_task*chunk_size,
+                               aligned_start + (nth_task+1)*chunk_size);
+    // Try and bump the global finger via a CAS;
+    // note that we need to do the global finger bump
+    // _before_ taking the intersection below, because
+    // the task corresponding to that region will be
+    // deemed done even if the used_region() expands
+    // because of allocation -- as it almost certainly will
+    // during start-up while the threads yield in the
+    // closure below.
+//    HeapWord* finger = span.end();
+//    bump_global_finger(finger);   // atomically
+    // There are null tasks here corresponding to chunks
+    // beyond the "top" address of the space.
+    span = span.intersection(sp->used_region());
+    if (!span.is_empty()) {  // Non-null task
+      HeapWord* prev_obj;
+//      assert(!span.contains(_restart_addr) || nth_task == 0,
+//             "Inconsistency");
+      if (nth_task == 0) {
+      } else {
+        // We want to skip the first object because
+        // the protocol is to scan any object in its entirety
+        // that _starts_ in this span; a fortiori, any
+        // object starting in an earlier span is scanned
+        // as part of an earlier claimed task.
+        // Below we use the "careful" version of block_start
+        // so we do not try to navigate uninitialized objects.
+        prev_obj = sp->block_start_careful(span.start());
+        HeapWord* prev_prev_obj = prev_obj;
+        // Below we use a variant of block_size that uses the
+        // Printezis bits to avoid waiting for allocated
+        // objects to become initialized/parsable.
+        while (prev_obj < span.start()) {
+          size_t sz = sp->block_size_no_stall(prev_obj, _collector);
+          if (sz > 0) {
+            prev_obj += sz;
+          } else {
+            // In this case we may end up doing a bit of redundant
+            // scanning, but that appears unavoidable, short of
+            // locking the free list locks; see bug 6324141.
+            assert(false, "Should not reach here");
+            ShouldNotReachHere();
+            break;
+          }
+        }
+        FreeChunk* fc2 = (FreeChunk*)prev_obj;
+        if (prev_obj < span.end() && fc2->is_free()){
+          if(prev_prev_obj == prev_obj){
+            prev_prev_obj = sp->block_start_careful(span.start() - CardTable::card_size_in_words * BitsPerWord);
+            while (prev_prev_obj < prev_obj) {
+              size_t sz = sp->block_size_no_stall(prev_prev_obj, _collector);
+              if (prev_prev_obj + sz == prev_obj){
+                FreeChunk* fc1 = (FreeChunk*)prev_prev_obj;
+                if(fc1->is_free()){
+                  size_t new_size = fc1->size()+fc2->size();
+                  sp->coalDeath(fc1->size());
+                  sp->removeFreeChunkFromFreeLists(fc1);
+                  sp->coalDeath(fc2->size());
+                  sp->removeFreeChunkFromFreeLists(fc2);
+                  sp->coalBirth(new_size);
+                  sp->addChunkAndRepairOffsetTable(prev_prev_obj, new_size, true);
+                  // int a = 0;
+                }
+                break;
+              }
+              if (sz > 0) {
+                prev_prev_obj += sz;
+                
+                
+              } else {
+                // In this case we may end up doing a bit of redundant
+                // scanning, but that appears unavoidable, short of
+                // locking the free list locks; see bug 6324141.
+                assert(false, "Should not reach here");
+                ShouldNotReachHere();
+                break;
+              }
+            }
+          }
+        }
+      }
+    }   // else nothing to do for this task
+  }
+  pst->all_tasks_completed();
+}
+
 void CMSParSweepingTask::do_sweeping(int i, ConcurrentMarkSweepGeneration* old_gen) {
   CompactibleFreeListSpace* sp = old_gen->cmsSpace();
   SequentialSubTasksDone* pst = sp->conc_par_seq_tasks();
@@ -5736,8 +5843,15 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
     } else {
       tsk.work(0);
     }
+
+
+
   }
   cms_space->freelistLock()->lock();
+  cms_space->initialize_sequential_subtasks_for_sweeping(1);
+  tsk.do_region_merging();
+
+
   old_gen->cmsSpace()->sweep_completed();
   old_gen->cmsSpace()->endSweepFLCensus(sweep_count());
   if (should_unload_classes()) {                // unloaded classes this cycle,
