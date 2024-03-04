@@ -3004,6 +3004,7 @@ void CMSParSweepingTask::do_region_merging() {
         while (prev_obj < span.start()) {
           size_t sz = sp->block_size_no_stall(prev_obj, _collector);
           if (sz > 0) {
+            prev_prev_obj = prev_obj;
             prev_obj += sz;
           } else {
             // In this case we may end up doing a bit of redundant
@@ -3021,17 +3022,6 @@ void CMSParSweepingTask::do_region_merging() {
             while (prev_prev_obj < prev_obj) {
               size_t sz = sp->block_size_no_stall(prev_prev_obj, _collector);
               if (prev_prev_obj + sz == prev_obj){
-                FreeChunk* fc1 = (FreeChunk*)prev_prev_obj;
-                if(fc1->is_free()){
-                  size_t new_size = fc1->size()+fc2->size();
-                  sp->coalDeath(fc1->size());
-                  sp->removeFreeChunkFromFreeLists(fc1);
-                  sp->coalDeath(fc2->size());
-                  sp->removeFreeChunkFromFreeLists(fc2);
-                  sp->coalBirth(new_size);
-                  sp->addChunkAndRepairOffsetTable(prev_prev_obj, new_size, true);
-                  // int a = 0;
-                }
                 break;
               }
               if (sz > 0) {
@@ -3046,6 +3036,35 @@ void CMSParSweepingTask::do_region_merging() {
                 ShouldNotReachHere();
                 break;
               }
+            }
+
+            {
+              size_t sz = sp->block_size_no_stall(prev_prev_obj, _collector);
+              assert(prev_prev_obj + sz == prev_obj, "wrong neighbor");
+              if(prev_prev_obj + sz != prev_obj){
+                int a = *((int*)0);
+              }
+            }
+
+            FreeChunk* fc1 = (FreeChunk*)prev_prev_obj;
+            if(fc1->is_free()){
+              size_t new_size = fc1->size()+fc2->size();
+              size_t new_size2 = pointer_delta(prev_obj+fc2->size(), prev_prev_obj);
+              if(new_size != new_size2){
+                int a = *((int*)1);
+              }
+              // log_info(gc)("fc1 before: %lu", fc1->size());
+              sp->coalDeath(fc1->size());
+              sp->removeFreeChunkFromFreeLists(fc1);
+              // log_info(gc)("fc1 after: %lu", fc1->size());
+              // log_info(gc)("fc2 before: %lu", fc2->size());
+              sp->coalDeath(fc2->size());
+              // log_info(gc)("fc2 after: %lu", fc2->size());
+              sp->removeFreeChunkFromFreeLists(fc2);
+              sp->coalBirth(new_size);
+              fc1->set_size(new_size);
+              sp->addChunkAndRepairOffsetTable(prev_prev_obj, new_size, true);
+              // int a = 0;
             }
           }
         }
