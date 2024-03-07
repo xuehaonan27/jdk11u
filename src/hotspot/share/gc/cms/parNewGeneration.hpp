@@ -381,6 +381,12 @@ class ParNewGeneration: public DefNewGeneration {
                        size_t size,
                        bool   is_tlab);
 
+  // Allocation support
+  virtual bool should_allocate(size_t word_size, bool is_tlab) {
+    assert(UseTLAB || !is_tlab, "Should not allocate tlab");
+    return false;
+  }
+
   // This needs to be visible to the closure function.
   // "obj" is the object to be copied, "m" is a recent value of its mark
   // that must not contain a forwarding pointer (though one might be
