@@ -3152,7 +3152,7 @@ void CMSParSweepingTask::do_sweeping(int i, ConcurrentMarkSweepGeneration* old_g
       }
       if (prev_obj < span.end()) {
         MemRegion my_span = MemRegion(prev_obj, span.end());
-        log_info(gc)("%d: start %p - %p", i, my_span.start(), my_span.end());
+        // log_info(gc)("%d: start %p - %p", i, my_span.start(), my_span.end());
         // Do the marking work within a non-empty span --
         // the last argument to the constructor indicates whether the
         // iteration should be incremental with periodic yields.
@@ -3160,7 +3160,7 @@ void CMSParSweepingTask::do_sweeping(int i, ConcurrentMarkSweepGeneration* old_g
                                    sweep_queue(i));//hua: here?
          old_gen->cmsSpace()->blk_iterate_careful(&sweepClosure, my_span.start(), my_span.end());
 
-        log_info(gc)("%d: finish %p - %p", i, my_span.start(), my_span.end());
+        // log_info(gc)("%d: finish %p - %p", i, my_span.start(), my_span.end());
 //        ParMarkFromRootsClosure cl(this, _collector, my_span,
 //                                   &_collector->_markBitMap,
 //                                   work_queue(i),

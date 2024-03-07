@@ -204,7 +204,7 @@
           "Size (in cards) of CMS parallel rescan task")                    \
           range(1, SIZE_MAX / 4096)                                         \
           constraint(CMSRescanMultipleConstraintFunc,AfterMemoryInit)       \
-  product(size_t, CMSSweepingMultiple, 2048,                                \
+  product(size_t, CMSSweepingMultiple, 256,                                \
           "Size (in cards) of CMS parallel rescan task")                    \
           range(1, SIZE_MAX / 4096)                                         \
           constraint(CMSSweepingMultipleConstraintFunc,AfterMemoryInit)     \

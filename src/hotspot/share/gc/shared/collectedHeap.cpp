@@ -403,7 +403,7 @@ CollectedHeap::fill_with_array(HeapWord* start, size_t words, bool zap)
   ObjArrayAllocator allocator(Universe::intArrayKlassObj(), words, (int)len, /* do_zero */ false);
   allocator.initialize(start);
   //!!!hua remove this later !!!
-  log_info(gc)("fill with array into %p-%p", start, start+words);
+  // log_info(gc)("fill with array into %p-%p", start, start+words);
   // zap_filler_array(start, words, zap);
   DEBUG_ONLY(zap_filler_array(start, words, zap);)
 }
