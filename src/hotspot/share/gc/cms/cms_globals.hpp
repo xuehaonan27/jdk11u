@@ -378,6 +378,10 @@
           "Check if the coalesced range is already in the "                 \
           "free lists as claimed")                                          \
                                                                             \
+  product(bool, CMSTestInFreeListProduct, false,                            \
+          "Check if the coalesced range is already in the "                 \
+          "free lists as claimed")                                          \
+                                                                            \
   notproduct(bool, CMSVerifyReturnedBytes, false,                           \
           "Check that all the garbage collected was returned to the "       \
           "free lists")                                                     \

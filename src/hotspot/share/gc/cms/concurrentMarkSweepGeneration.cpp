@@ -7669,8 +7669,8 @@ void SweepClosure::do_already_free_chunk(FreeChunk* fc) {
            "free chunk should be in free lists");
   }
   //hua: remove later:
-  if (!fc->cantCoalesce()){
-    if(_sp->verify_chunk_in_free_list(fc)){
+  if (CMSTestInFreeListProduct && !fc->cantCoalesce()){
+    if(!_sp->verify_chunk_in_free_list(fc)){
       ShouldNotReachHere();
     }
   }
@@ -7785,12 +7785,12 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
     assert(_sp->verify_chunk_in_free_list(fc), "free chunk is not in free lists");
   }
 
-  // //hua: remove later:
-  // if (fcInFreeLists) {
-  //   if(_sp->verify_chunk_in_free_list(fc)){
-  //     ShouldNotReachHere();
-  //   }
-  // }
+  //hua: remove later:
+  if (CMSTestInFreeListProduct && fcInFreeLists) {
+    if(!_sp->verify_chunk_in_free_list(fc)){
+      ShouldNotReachHere();
+    }
+  }
 
   log_develop_trace(gc, sweep)("  -- pick up another chunk at " PTR_FORMAT " (" SIZE_FORMAT ")", p2i(fc), chunkSize);
 
