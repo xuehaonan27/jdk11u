@@ -3026,8 +3026,6 @@ void CMSParSweepingTask::do_region_merging() {
               }
               if (sz > 0) {
                 prev_prev_obj += sz;
-                
-                
               } else {
                 // In this case we may end up doing a bit of redundant
                 // scanning, but that appears unavoidable, short of
@@ -3037,35 +3035,48 @@ void CMSParSweepingTask::do_region_merging() {
                 break;
               }
             }
+          }
 
+          FreeChunk* fc1 = (FreeChunk*)prev_prev_obj;
+
+          {
+            size_t sz = sp->block_size_no_stall(prev_prev_obj, _collector);
+            assert(prev_prev_obj + sz == prev_obj, "wrong neighbor");
+            if(prev_prev_obj + sz != prev_obj){
+              ShouldNotReachHere();
+            }
+          }
+          
+          if(fc1->is_free()){
             {
-              size_t sz = sp->block_size_no_stall(prev_prev_obj, _collector);
-              assert(prev_prev_obj + sz == prev_obj, "wrong neighbor");
-              if(prev_prev_obj + sz != prev_obj){
-                int a = *((int*)0);
+              if(!sp->verify_chunk_in_free_list(fc2)){
+                log_info(gc)("wrong fc2");
+                ShouldNotReachHere();
+              }
+
+              if(!sp->verify_chunk_in_free_list(fc1)){
+                log_info(gc)("wrong fc1");
+                ShouldNotReachHere();
               }
             }
 
-            FreeChunk* fc1 = (FreeChunk*)prev_prev_obj;
-            if(fc1->is_free()){
-              size_t new_size = fc1->size()+fc2->size();
-              size_t new_size2 = pointer_delta(prev_obj+fc2->size(), prev_prev_obj);
-              if(new_size != new_size2){
-                int a = *((int*)1);
-              }
-              // log_info(gc)("fc1 before: %lu", fc1->size());
-              sp->coalDeath(fc1->size());
-              sp->removeFreeChunkFromFreeLists(fc1);
-              // log_info(gc)("fc1 after: %lu", fc1->size());
-              // log_info(gc)("fc2 before: %lu", fc2->size());
-              sp->coalDeath(fc2->size());
-              // log_info(gc)("fc2 after: %lu", fc2->size());
-              sp->removeFreeChunkFromFreeLists(fc2);
-              sp->coalBirth(new_size);
-              fc1->set_size(new_size);
-              sp->addChunkAndRepairOffsetTable(prev_prev_obj, new_size, true);
-              // int a = 0;
+            size_t new_size = fc1->size()+fc2->size();
+            size_t new_size2 = pointer_delta(prev_obj+fc2->size(), prev_prev_obj);
+            if(new_size != new_size2){
+               ShouldNotReachHere();
             }
+            // log_info(gc)("fc1 before: %lu", fc1->size());
+            sp->coalDeath(fc1->size());
+            sp->removeFreeChunkFromFreeLists(fc1);
+            // log_info(gc)("fc1 after: %lu", fc1->size());
+            // log_info(gc)("fc2 before: %lu", fc2->size());
+            sp->coalDeath(fc2->size());
+            // log_info(gc)("fc2 after: %lu", fc2->size());
+            sp->removeFreeChunkFromFreeLists(fc2);
+            sp->coalBirth(new_size);
+            fc1->set_size(new_size);
+            sp->addChunkAndRepairOffsetTable(prev_prev_obj, new_size, true);
+            // int a = 0;
           }
         }
       }
@@ -5867,8 +5878,8 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
 
   }
   cms_space->freelistLock()->lock();
-  cms_space->initialize_sequential_subtasks_for_sweeping(1);
-  tsk.do_region_merging();
+  // cms_space->initialize_sequential_subtasks_for_sweeping(1);
+  // tsk.do_region_merging();
 
 
   old_gen->cmsSpace()->sweep_completed();
@@ -7657,6 +7668,13 @@ void SweepClosure::do_already_free_chunk(FreeChunk* fc) {
     assert(_sp->verify_chunk_in_free_list(fc),
            "free chunk should be in free lists");
   }
+  //hua: remove later:
+  if (!fc->cantCoalesce()){
+    if(_sp->verify_chunk_in_free_list(fc)){
+      ShouldNotReachHere();
+    }
+  }
+
   // a chunk that is already free, should not have been
   // marked in the bit map
   HeapWord* const addr = (HeapWord*) fc;
@@ -7766,6 +7784,13 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
   if (CMSTestInFreeList && fcInFreeLists) {
     assert(_sp->verify_chunk_in_free_list(fc), "free chunk is not in free lists");
   }
+
+  // //hua: remove later:
+  // if (fcInFreeLists) {
+  //   if(_sp->verify_chunk_in_free_list(fc)){
+  //     ShouldNotReachHere();
+  //   }
+  // }
 
   log_develop_trace(gc, sweep)("  -- pick up another chunk at " PTR_FORMAT " (" SIZE_FORMAT ")", p2i(fc), chunkSize);
 
