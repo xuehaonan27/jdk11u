@@ -1153,7 +1153,14 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
     _collector = collector;
   }
 
-  bool supports_tlab_allocation() const { return true; }
+  bool supports_tlab_allocation() const {
+    if (UseConcMarkSweepGC && UseMSOld) {
+      return true;
+    } else {
+      return false;
+    }
+
+  }
   size_t tlab_capacity() const;
   size_t tlab_used() const;
   size_t unsafe_max_tlab_alloc() const;

@@ -41,7 +41,7 @@
                      writeable)                                             \
   product(bool, UseCMSBestFit, true,                                        \
           "Use CMS best fit allocation strategy")                           \
-                                                                            \
+  product(bool, UseMSOld, true, "Use only the ms old generation")           \
   product(size_t, CMSOldPLABMax, 1024,                                      \
           "Maximum size of CMS gen promotion LAB caches per worker "        \
           "per block size")                                                 \

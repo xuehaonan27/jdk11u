@@ -383,8 +383,12 @@ class ParNewGeneration: public DefNewGeneration {
 
   // Allocation support
   virtual bool should_allocate(size_t word_size, bool is_tlab) {
-    assert(UseTLAB || !is_tlab, "Should not allocate tlab");
-    return false;
+    if (UseConcMarkSweepGC && UseMSOld) {
+      assert(UseTLAB || !is_tlab, "Should not allocate tlab");
+      return false;
+    } else {
+      return DefNewGeneration::should_allocate(word_size, is_tlab);
+    }
   }
 
   // This needs to be visible to the closure function.

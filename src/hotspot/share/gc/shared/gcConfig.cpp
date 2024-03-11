@@ -153,14 +153,7 @@ GCArguments* GCConfig::select_gc() {
   // Fail immediately if an unsupported GC is selected
   fail_if_unsupported_gc_is_selected();
 
-
-  FOR_EACH_SUPPORTED_GC(gc) {
-    if (gc->_flag) {
-      gc->_flag = false;
-    }
-  }
-
-  // if (is_no_gc_selected()) {
+  if (is_no_gc_selected()) {
     // Try select GC ergonomically
     select_gc_ergonomically();
 
@@ -172,7 +165,7 @@ GCArguments* GCConfig::select_gc() {
 
     // Succeeded to select GC ergonomically
     _gc_selected_ergonomically = true;
-  // }
+  }
 
   if (!is_exactly_one_gc_selected()) {
     // More than one GC selected

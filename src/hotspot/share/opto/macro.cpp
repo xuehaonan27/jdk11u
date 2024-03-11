@@ -25,6 +25,7 @@
 #include "precompiled.hpp"
 #include "compiler/compileLog.hpp"
 #include "gc/shared/collectedHeap.inline.hpp"
+#include "gc/cms/cms_globals.hpp"
 #include "libadt/vectset.hpp"
 #include "opto/addnode.hpp"
 #include "opto/arraycopynode.hpp"
@@ -1303,7 +1304,7 @@ void PhaseMacroExpand::expand_allocate_common(
   // We need a Region and corresponding Phi's to merge the slow-path and fast-path results.
   // they will not be used if "always_slow" is set
 
-  if (UseConcMarkSweepGC){
+  if (UseConcMarkSweepGC && UseMSOld){
     ConXNode* min_chunk_in_bytes = ConXNode::make(24l);
     transform_later(min_chunk_in_bytes);
     Node* check = new CmpXNode(min_chunk_in_bytes, size_in_bytes);

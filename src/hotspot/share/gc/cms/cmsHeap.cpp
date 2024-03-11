@@ -28,6 +28,7 @@
 #include "gc/cms/concurrentMarkSweepGeneration.hpp"
 #include "gc/cms/concurrentMarkSweepThread.hpp"
 #include "gc/cms/cmsHeap.hpp"
+#include "gc/cms/cms_globals.hpp"
 #include "gc/cms/parNewGeneration.hpp"
 #include "gc/cms/vmCMSOperations.hpp"
 #include "gc/shared/genCollectedHeap.hpp"
@@ -285,26 +286,45 @@ GrowableArray<MemoryPool*> CMSHeap::memory_pools() {
 
 
 bool CMSHeap::supports_tlab_allocation() const {
-  return _old_gen->supports_tlab_allocation();
+  if (UseConcMarkSweepGC && UseMSOld) {
+    return _old_gen->supports_tlab_allocation();
+  } else {
+    return GenCollectedHeap::supports_tlab_allocation();
+  }
+
 }
 
 size_t CMSHeap::tlab_capacity(Thread* thr) const {
-  if (_old_gen->supports_tlab_allocation()) {
-    return _old_gen->tlab_capacity();
+  if (UseConcMarkSweepGC && UseMSOld) {
+    if (_old_gen->supports_tlab_allocation()) {
+      return _old_gen->tlab_capacity();
+    }
+    return 0;
+  } else {
+    return GenCollectedHeap::tlab_capacity();
   }
-  return 0;
+
 }
 
 size_t CMSHeap::tlab_used(Thread* thr) const {
-  if (_old_gen->supports_tlab_allocation()) {
-    return _old_gen->tlab_used();
+  if (UseConcMarkSweepGC && UseMSOld) {
+    if (_old_gen->supports_tlab_allocation()) {
+      return _old_gen->tlab_used();
+    }
+    return 0;
+  } else {
+    return GenCollectedHeap::tlab_used();
   }
-  return 0;
 }
 
 size_t CMSHeap::unsafe_max_tlab_alloc(Thread* thr) const {
-  if (_old_gen->supports_tlab_allocation()) {
-    return _old_gen->unsafe_max_tlab_alloc();
+  if (UseConcMarkSweepGC && UseMSOld) {
+    if (_old_gen->supports_tlab_allocation()) {
+      return _old_gen->unsafe_max_tlab_alloc();
+    }
+    return 0;
+  } else {
+    return GenCollectedHeap::unsafe_max_tlab_alloc();
   }
-  return 0;
+
 }

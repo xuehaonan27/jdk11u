@@ -28,6 +28,8 @@
 #include "gc/shared/collectedHeap.hpp"
 #include "gc/shared/memAllocator.hpp"
 #include "gc/shared/threadLocalAllocBuffer.inline.hpp"
+#include "gc/shared/gc_globals.hpp"
+#include "gc/cms/cms_globals.hpp"
 #include "memory/universe.hpp"
 #include "oops/arrayOop.hpp"
 #include "oops/oop.inline.hpp"
@@ -291,11 +293,17 @@ HeapWord* MemAllocator::allocate_inside_tlab(Allocation& allocation) const {
     return mem;
   }
 
-  // Try refilling the TLAB and allocating the object in it.
-  return allocate_inside_tlab_slow(allocation);
+  if (UseConcMarkSweepGC && UseMSOld) {
+    // Try refilling the TLAB and allocating the object in it.
+    return allocate_inside_tlab_slow_cms(allocation);
+  } else {
+    // Try refilling the TLAB and allocating the object in it.
+    return allocate_inside_tlab_slow(allocation);
+  }
+
 }
 
-HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const {
+HeapWord* MemAllocator::allocate_inside_tlab_slow_cms(Allocation& allocation) const {
   HeapWord* mem = NULL;
   ThreadLocalAllocBuffer& tlab = _thread->tlab();
 
@@ -321,13 +329,9 @@ HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const 
   // To minimize fragmentation, the last TLAB may be smaller than the rest.
   size_t new_tlab_size = tlab.compute_size(CompactibleFreeListSpace::adjustObjectSize(_word_size));
 
-//  log_info(gc)("tlab free: %lu, refill_waste_limit: %lu", tlab.free(), tlab.refill_waste_limit());
-  // log_info(gc)("tlab retire during allocation, tlab: %p, start: %p, top: %p, end: %p, hard_end: %p", &tlab,
-  //   tlab.start(), tlab.top(), tlab.end(), tlab.hard_end());
   tlab.clear_before_allocation();
 
   if (new_tlab_size == 0) {
-    // log_info(gc)("not enough space for new tlab %p", &tlab);
     return NULL;
   }
 
@@ -366,6 +370,71 @@ HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const 
   tlab.fill(mem, mem + CompactibleFreeListSpace::adjustObjectSize(_word_size), allocation._allocated_tlab_size);
   // log_info(gc)("tlab fill during allocation, tlab: %p, start: %p, top: %p, end: %p, hard_end: %p", &tlab,
   //     tlab.start(), tlab.top(), tlab.end(), tlab.hard_end());
+  return mem;
+}
+
+HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const {
+  HeapWord* mem = NULL;
+  ThreadLocalAllocBuffer& tlab = _thread->tlab();
+
+  if (ThreadHeapSampler::enabled()) {
+    // Try to allocate the sampled object from TLAB, it is possible a sample
+    // point was put and the TLAB still has space.
+    tlab.set_back_allocation_end();
+    mem = tlab.allocate(_word_size);
+    if (mem != NULL) {
+      allocation._tlab_end_reset_for_sample = true;
+      return mem;
+    }
+  }
+
+  // Retain tlab and allocate object in shared space if
+  // the amount free in the tlab is too large to discard.
+  if (tlab.free() > tlab.refill_waste_limit()) {
+    tlab.record_slow_allocation(_word_size);
+    return NULL;
+  }
+
+  // Discard tlab and allocate a new one.
+  // To minimize fragmentation, the last TLAB may be smaller than the rest.
+  size_t new_tlab_size = tlab.compute_size(_word_size);
+
+  tlab.clear_before_allocation();
+
+  if (new_tlab_size == 0) {
+    return NULL;
+  }
+
+  // Allocate a new TLAB requesting new_tlab_size. Any size
+  // between minimal and new_tlab_size is accepted.
+  size_t min_tlab_size = ThreadLocalAllocBuffer::compute_min_size(_word_size);
+  mem = _heap->allocate_new_tlab(min_tlab_size, new_tlab_size, &allocation._allocated_tlab_size);
+  if (mem == NULL) {
+    assert(allocation._allocated_tlab_size == 0,
+           "Allocation failed, but actual size was updated. min: " SIZE_FORMAT
+    ", desired: " SIZE_FORMAT ", actual: " SIZE_FORMAT,
+            min_tlab_size, new_tlab_size, allocation._allocated_tlab_size);
+    return NULL;
+  }
+  assert(allocation._allocated_tlab_size != 0, "Allocation succeeded but actual size not updated. mem at: "
+  PTR_FORMAT " min: " SIZE_FORMAT ", desired: " SIZE_FORMAT,
+          p2i(mem), min_tlab_size, new_tlab_size);
+
+  if (ZeroTLAB) {
+    // ..and clear it.
+    Copy::zero_to_words(mem, allocation._allocated_tlab_size);
+  } else {
+    // ...and zap just allocated object.
+#ifdef ASSERT
+    // Skip mangling the space corresponding to the object header to
+    // ensure that the returned space is not considered parsable by
+    // any concurrent GC thread.
+    size_t hdr_size = oopDesc::header_size();
+    Copy::fill_to_words(mem + hdr_size, allocation._allocated_tlab_size - hdr_size, badHeapWordVal);
+#endif // ASSERT
+  }
+
+  tlab.fill(mem, mem + _word_size, allocation._allocated_tlab_size);
   return mem;
 }
 

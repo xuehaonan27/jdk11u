@@ -311,9 +311,11 @@ HeapWord* GenCollectedHeap::mem_allocate_work(size_t size,
         assert(is_in_reserved(result), "result not in heap");
         return result;
       }
-      
-      if (is_tlab) {
+      if (UseConcMarkSweepGC && UseMSOld) {
+        if (is_tlab) {
+
           return NULL;  // Caller will retry allocating individual object.
+        }
       }
 
       if (GCLocker::is_active_and_needs_gc()) {
@@ -711,33 +713,33 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
     // GC locker is active; instead of a collection we will attempt
     // to expand the heap, if there's room for expansion.
     if (!is_maximal_no_gc()) {
-      log_info(gc)("expand alloc 1");
+//      log_info(gc)("expand alloc 1");
       result = expand_heap_and_allocate(size, is_tlab);
-      log_info(gc)("expand alloc 1 complete");
+//      log_info(gc)("expand alloc 1 complete");
     }
     return result;   // Could be null if we are out of space.
   } else if (!incremental_collection_will_fail(false /* don't consult_young */)) {
     // Do an incremental collection.
-    log_info(gc)("do collection 1 call");
+//    log_info(gc)("do collection 1 call");
     do_collection(false,                     // full
                   false,                     // clear_all_soft_refs
                   size,                      // size
                   is_tlab,                   // is_tlab
                   GenCollectedHeap::OldGen); // max_generation
-    log_info(gc)("do collection 1 complete");
+//    log_info(gc)("do collection 1 complete");
   } else {
     log_trace(gc)(" :: Trying full because partial may fail :: ");
     // Try a full collection; see delta for bug id 6266275
     // for the original code and why this has been simplified
     // with from-space allocation criteria modified and
     // such allocation moved out of the safepoint path.
-    log_info(gc)("do collection 2 call");
+//    log_info(gc)("do collection 2 call");
     do_collection(true,                      // full
                   false,                     // clear_all_soft_refs
                   size,                      // size
                   is_tlab,                   // is_tlab
                   GenCollectedHeap::OldGen); // max_generation
-    log_info(gc)("do collection 2 complete");
+//    log_info(gc)("do collection 2 complete");
   }
 
   result = attempt_allocation(size, is_tlab, false /*first_only*/);
@@ -748,10 +750,10 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
   }
 
   // OK, collection failed, try expansion.
-  log_info(gc)("expand alloc 2");
+//  log_info(gc)("expand alloc 2");
   result = expand_heap_and_allocate(size, is_tlab);
   if (result != NULL) {
-    log_info(gc)("expand alloc 2 succeed");
+//    log_info(gc)("expand alloc 2 succeed");
     return result;
   }
 
@@ -763,20 +765,20 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
   {
     UIntFlagSetting flag_change(MarkSweepAlwaysCompactCount, 1); // Make sure the heap is fully compacted
 
-    log_info(gc)("do collection 3 call");
+//    log_info(gc)("do collection 3 call");
     do_collection(true,                      // full
                   true,                      // clear_all_soft_refs
                   size,                      // size
                   is_tlab,                   // is_tlab
                   GenCollectedHeap::OldGen); // max_generation
-    log_info(gc)("do collection 3 complete");
+//    log_info(gc)("do collection 3 complete");
   }
 
-  log_info(gc)("attempt allocation call");
+//  log_info(gc)("attempt allocation call");
   result = attempt_allocation(size, is_tlab, false /* first_only */);
   if (result != NULL) {
     assert(is_in_reserved(result), "result not in heap");
-    log_info(gc)("attempt allocation succeed");
+//    log_info(gc)("attempt allocation succeed");
     return result;
   }
 
@@ -788,7 +790,7 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
   // complete compaction phase than we've tried so far might be
   // appropriate.
 
-  log_info(gc)("all attempts failed");
+//  log_info(gc)("all attempts failed");
   return NULL;
 }
 
@@ -998,10 +1000,6 @@ void GenCollectedHeap::collect_locked(GCCause::Cause cause) {
 // The Heap_lock is expected to be held on entry.
 
 void GenCollectedHeap::collect_locked(GCCause::Cause cause, GenerationType max_generation) {
-
-
-
-
   // Read the GC count while holding the Heap_lock
   unsigned int gc_count_before      = total_collections();
   unsigned int full_gc_count_before = total_full_collections();
@@ -1024,7 +1022,7 @@ void GenCollectedHeap::do_full_collection(bool clear_all_soft_refs) {
 
 void GenCollectedHeap::do_full_collection(bool clear_all_soft_refs,
                                           GenerationType last_generation) {
-  log_info(gc)("do collection in do_full colleciton 1");
+//  log_info(gc)("do collection in do_full colleciton 1");
   do_collection(true,                   // full
                 clear_all_soft_refs,    // clear_all_soft_refs
                 0,                      // size
@@ -1035,7 +1033,7 @@ void GenCollectedHeap::do_full_collection(bool clear_all_soft_refs,
   // been attempted and failed, because the old gen was too full
   if (gc_cause() == GCCause::_gc_locker && incremental_collection_failed()) {
     log_debug(gc, jni)("GC locker: Trying a full collection because scavenge failed");
-    log_info(gc)("do collection in do_full colleciton 2");
+//    log_info(gc)("do collection in do_full colleciton 2");
     // This time allow the old gen to be collected as well
     do_collection(true,                // full
                   clear_all_soft_refs, // clear_all_soft_refs

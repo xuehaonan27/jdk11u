@@ -35,6 +35,9 @@
 #include "runtime/os.hpp"
 #include "runtime/sharedRuntime.hpp"
 #include "runtime/stubRoutines.hpp"
+#include "gc/cms/cms_globals.hpp"
+#include "gc/shared/gc_globals.hpp"
+
 
 int C1_MacroAssembler::lock_object(Register hdr, Register obj, Register disp_hdr, Register scratch, Label& slow_case) {
   const int aligned_mask = BytesPerWord -1;
@@ -197,9 +200,12 @@ void C1_MacroAssembler::allocate_object(Register obj, Register t1, Register t2, 
   assert_different_registers(obj, t1, t2); // XXX really?
   assert(header_size >= 0 && object_size >= header_size, "illegal sizes");
 
-  if (object_size < 3){
-    object_size = 3;
+  if(UseConcMarkSweepGC && UseMSOld){
+    if (object_size < 3){
+      object_size = 3;
+    }
   }
+
 
   try_allocate(obj, noreg, object_size * BytesPerWord, t1, t2, slow_case);
 
@@ -274,9 +280,11 @@ void C1_MacroAssembler::allocate_array(Register obj, Register len, Register t1, 
   lea(arr_size, Address(arr_size, len, f));
   andptr(arr_size, ~MinObjAlignmentInBytesMask);
 
-  movl(t1, 24);      // Load 24 into %rax
-  cmpq(t1, arr_size);     // Compare %rdx and %rax
-  cmovq(Assembler::positive, arr_size, t1);
+  if(UseConcMarkSweepGC && UseMSOld) {
+    movl(t1, 24);      // Load 24 into %rax
+    cmpq(t1, arr_size);     // Compare %rdx and %rax
+    cmovq(Assembler::positive, arr_size, t1);
+  }
 
   try_allocate(obj, arr_size, 0, t1, t2, slow_case);
 

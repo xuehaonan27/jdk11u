@@ -35,6 +35,7 @@
 #include "gc/shared/gcWhen.hpp"
 #include "gc/shared/memAllocator.hpp"
 #include "gc/shared/vmGCOperations.hpp"
+#include "gc/cms/cms_globals.hpp"
 #include "logging/log.hpp"
 #include "memory/metaspace.hpp"
 #include "memory/resourceArea.hpp"
@@ -359,7 +360,11 @@ size_t CollectedHeap::filler_array_hdr_size() {
 }
 
 size_t CollectedHeap::filler_array_min_size() {
-  return CompactibleFreeListSpace::adjustObjectSize(filler_array_hdr_size()); // align to MinObjAlignment
+  if (UseConcMarkSweepGC && UseMSOld) {
+    return CompactibleFreeListSpace::adjustObjectSize(filler_array_hdr_size()); // align to MinObjAlignment
+  } else {
+    return align_object_size(filler_array_hdr_size()); // align to MinObjAlignment
+  }
 }
 
 #ifdef ASSERT
@@ -500,8 +505,13 @@ void CollectedHeap::ensure_parsability(bool retire_tlabs) {
   BarrierSet *bs = BarrierSet::barrier_set();
   for (; JavaThread *thread = jtiwh.next(); ) {
      if (use_tlab){
-      thread->tlab().make_parsable_no_lock(retire_tlabs);
-      thread->tlab().initialize();
+       if (UseConcMarkSweepGC && UseMSOld) {
+         thread->tlab().make_parsable_no_lock(retire_tlabs);
+         thread->tlab().initialize();
+       }
+       else {
+         thread->tlab().make_parsable(retire_tlabs);
+       }
      }
      bs->make_parsable(thread);
   }

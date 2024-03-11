@@ -33,6 +33,8 @@
 #include "utilities/copy.hpp"
 #include "gc/cms/compactibleFreeListSpace.hpp"
 #include "gc/cms/cmsHeap.hpp"
+#include "gc/shared/gc_globals.hpp"
+#include "gc/cms/cms_globals.hpp"
 
 // Thread-Local Edens support
 
@@ -41,8 +43,6 @@ size_t           ThreadLocalAllocBuffer::_max_size       = 0;
 int              ThreadLocalAllocBuffer::_reserve_for_allocation_prefetch = 0;
 unsigned         ThreadLocalAllocBuffer::_target_refills = 0;
 GlobalTLABStats* ThreadLocalAllocBuffer::_global_stats   = NULL;
-
-ThreadLocalAllocBuffer* ThreadLocalAllocBuffer::watched = NULL;
 
 void ThreadLocalAllocBuffer::clear_before_allocation() {
   _slow_refill_waste += (unsigned)remaining();
@@ -128,11 +128,6 @@ void ThreadLocalAllocBuffer::make_parsable(bool retire, bool zap) {
 // Waste accounting should be done in caller as appropriate; see,
 // for example, clear_before_allocation().
 void ThreadLocalAllocBuffer::make_parsable_work(bool retire, bool zap, bool use_heap_lock) {
-//  log_info(gc)("make parsable of tlab %p in %p", this, myThread());
-  if(retire){
-  //  log_info(gc)("should retire");
-  }
-  
   if (end() != NULL) {
     invariants();
 
@@ -140,17 +135,10 @@ void ThreadLocalAllocBuffer::make_parsable_work(bool retire, bool zap, bool use_
       myThread()->incr_allocated_bytes(used_bytes());
     }
 
-  //  log_info(gc)("fill in tlab %p top: %p, hard end: %p", this, top(), hard_end());
-  //  if(CompactibleFreeListSpace::adjustObjectSize(pointer_delta(hard_end(), top())) == pointer_delta(hard_end(), top())){
-  //     log_info(gc)("equals");
-  //  }
-  //  else {
-  //   log_info(gc)("not equal");
-  //  }
     Universe::heap()->fill_with_dummy_object(top(), hard_end(), retire && zap);
-   if (UseConcMarkSweepGC){
-     ((CMSHeap*)Universe::heap())->retireTLAB(start(), hard_end(), use_heap_lock);
-   }
+    if (UseConcMarkSweepGC && UseMSOld) {
+      ((CMSHeap*)Universe::heap())->retireTLAB(start(), hard_end(), use_heap_lock);
+    }
 
     if (retire || ZeroTLAB) {  // "Reset" the TLAB
       set_start(NULL);
@@ -159,9 +147,6 @@ void ThreadLocalAllocBuffer::make_parsable_work(bool retire, bool zap, bool use_
       set_end(NULL);
       set_allocation_end(NULL);
     }
-  }
-  else {
-  //  log_info(gc)("tlab not initialized");
   }
   assert(!(retire || ZeroTLAB)  ||
          (start() == NULL && end() == NULL && top() == NULL &&
@@ -299,8 +284,11 @@ void ThreadLocalAllocBuffer::startup_initialization() {
 
 size_t ThreadLocalAllocBuffer::end_reserve() {
     int reserve_size = typeArrayOopDesc::header_size(T_INT);
-    return MAX2(MinChunkSize, (size_t)MAX2(reserve_size, _reserve_for_allocation_prefetch));
-//    return MAX2(reserve_size, _reserve_for_allocation_prefetch);
+    if (UseConcMarkSweepGC && UseMSOld) {
+      return MAX2(MinChunkSize, (size_t) MAX2(reserve_size, _reserve_for_allocation_prefetch));
+    } else{
+      return MAX2(reserve_size, _reserve_for_allocation_prefetch);
+    }
 }
 
 size_t ThreadLocalAllocBuffer::initial_desired_size() {
@@ -506,4 +494,3 @@ void GlobalTLABStats::print() {
             _total_fast_refill_waste * HeapWordSize,
             _max_fast_refill_waste * HeapWordSize);
 }
-

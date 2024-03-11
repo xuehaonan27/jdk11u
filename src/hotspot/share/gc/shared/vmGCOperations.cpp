@@ -186,6 +186,10 @@ void VM_GenCollectFull::doit() {
 }
 
 bool VM_GenCollectFull::doit_prologue() {
+  if (!(UseConcMarkSweepGC && UseMSOld)) {
+    return VM_GC_Operation::doit_prologue();
+  }
+
   assert(Thread::current()->is_Java_thread(), "just checking");
   assert(((_gc_cause != GCCause::_no_gc) &&
           (_gc_cause != GCCause::_no_cause_specified)), "Illegal GCCause");
@@ -216,6 +220,11 @@ bool VM_GenCollectFull::doit_prologue() {
 
 
 void VM_GenCollectFull::doit_epilogue() {
+  if (!(UseConcMarkSweepGC && UseMSOld)) {
+    VM_GC_Operation::doit_epilogue();
+    return;
+  }
+
   assert(Thread::current()->is_Java_thread(), "just checking");
   // Clean up old interpreter OopMap entries that were replaced
   // during the GC thread root traversal.

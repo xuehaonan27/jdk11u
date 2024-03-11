@@ -28,6 +28,7 @@
 #include "gc/shared/gcCause.hpp"
 #include "gc/shared/gcWhen.hpp"
 #include "gc/cms/compactibleFreeListSpace.hpp"
+#include "gc/cms/cms_globals.hpp"
 #include "memory/allocation.hpp"
 #include "memory/heapInspection.hpp"
 #include "runtime/handles.hpp"
@@ -313,7 +314,11 @@ class CollectedHeap : public CHeapObj<mtGC> {
   // than the largest array of integers; it uses a single object to fill the
   // region and has slightly less overhead.
   static size_t min_fill_size() {
-    return size_t(CompactibleFreeListSpace::adjustObjectSize(oopDesc::header_size()));
+    if (UseConcMarkSweepGC && UseMSOld){
+      return size_t(CompactibleFreeListSpace::adjustObjectSize(oopDesc::header_size()));
+    } else {
+      return size_t(align_object_size(oopDesc::header_size()));
+    }
   }
 
   static void fill_with_objects(HeapWord* start, size_t words, bool zap = true);

@@ -31,20 +31,16 @@
 #include "runtime/thread.hpp"
 #include "utilities/copy.hpp"
 #include "gc/cms/compactibleFreeListSpace.hpp"
-
-
-// static void conditional_breakpoint1(ThreadLocalAllocBuffer* tlab){
-//   watchedBuffer = tlab;
-// }
+#include "gc/shared/gc_globals.hpp"
+#include "gc/cms/cms_globals.hpp"
 
 inline HeapWord* ThreadLocalAllocBuffer::allocate(size_t size) {
   invariants();
   HeapWord* obj = top();
-  size = CompactibleFreeListSpace::adjustObjectSize(size);
+  if (UseConcMarkSweepGC && UseMSOld) {
+    size = CompactibleFreeListSpace::adjustObjectSize(size);
+  }
 //  log_info(gc)("tlab allocation, adjusted size: %lu", size);
-  // if(top() == (void*)0xff4a6f40){
-  //   conditional_breakpoint1(this);
-  // }
   if (pointer_delta(end(), obj) >= size) {
     // successful thread-local allocation
 #ifdef ASSERT
@@ -73,7 +69,11 @@ inline size_t ThreadLocalAllocBuffer::compute_size(size_t obj_size) {
   // unsafe_max_tlab_alloc is just a hint.
   const size_t available_size = Universe::heap()->unsafe_max_tlab_alloc(myThread()) /
                                                   HeapWordSize;
-  size_t new_tlab_size = MIN3(available_size, desired_size() + CompactibleFreeListSpace::adjustObjectSize(obj_size), max_size());
+  if (UseConcMarkSweepGC && UseMSOld) {
+    size_t new_tlab_size = MIN3(available_size, desired_size() + CompactibleFreeListSpace::adjustObjectSize(obj_size), max_size());
+  } else {
+    size_t new_tlab_size = MIN3(available_size, desired_size() + align_object_size(obj_size), max_size());
+  }
   // log_info(gc)("av %lu, desire %lu, max %lu", available_size, desired_size() + CompactibleFreeListSpace::adjustObjectSize(obj_size), max_size());
   // Make sure there's enough room for object and filler int[].
   if (new_tlab_size < compute_min_size(obj_size)) {
@@ -88,9 +88,15 @@ inline size_t ThreadLocalAllocBuffer::compute_size(size_t obj_size) {
 }
 
 inline size_t ThreadLocalAllocBuffer::compute_min_size(size_t obj_size) {
-  const size_t aligned_obj_size = CompactibleFreeListSpace::adjustObjectSize(obj_size);
-  const size_t size_with_reserve = aligned_obj_size + alignment_reserve();
-  return MAX2(size_with_reserve, heap_word_size(MinTLABSize));
+  if (UseConcMarkSweepGC && UseMSOld) {
+    const size_t aligned_obj_size = CompactibleFreeListSpace::adjustObjectSize(obj_size);
+    const size_t size_with_reserve = aligned_obj_size + alignment_reserve();
+    return MAX2(size_with_reserve, heap_word_size(MinTLABSize));
+  } else {
+    const size_t aligned_obj_size = align_object_size(obj_size);
+    const size_t size_with_reserve = aligned_obj_size + alignment_reserve();
+    return MAX2(size_with_reserve, heap_word_size(MinTLABSize));
+  }
 }
 
 void ThreadLocalAllocBuffer::record_slow_allocation(size_t obj_size) {

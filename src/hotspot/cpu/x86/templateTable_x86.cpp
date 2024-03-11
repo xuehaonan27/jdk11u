@@ -39,6 +39,8 @@
 #include "runtime/stubRoutines.hpp"
 #include "runtime/synchronizer.hpp"
 #include "utilities/macros.hpp"
+#include "gc/cms/cms_globals.hpp"
+#include "gc/shared/gc_globals.hpp"
 
 #define __ _masm->
 
@@ -4003,7 +4005,6 @@ void TemplateTable::_new() {
   // This is done before loading InstanceKlass to be consistent with the order
   // how Constant Pool is updated (see ConstantPool::klass_at_put)
   const int tags_offset = Array<u1>::base_offset_in_bytes();
-  // __ jmp(slow_case_no_pop);
   __ cmpb(Address(rax, rdx, Address::times_1, tags_offset), JVM_CONSTANT_Class);
   __ jcc(Assembler::notEqual, slow_case_no_pop);
 
@@ -4047,9 +4048,11 @@ void TemplateTable::_new() {
 #endif // _LP64
 
   if (UseTLAB) {
-    __ movl(rbx, 24);      // Load 24 into %rax
-    __ cmpq(rbx, rdx);     // Compare %rdx and %rax
-    __ cmovq(Assembler::positive, rdx, rbx);
+    if(UseConcMarkSweepGC && UseMSOld) {
+      __ movl(rbx, 24);      // Load 24 into %rax
+      __ cmpq(rbx, rdx);     // Compare %rdx and %rax
+      __ cmovq(Assembler::positive, rdx, rbx);
+    }
     __ tlab_allocate(thread, rax, rdx, 0, rcx, rbx, slow_case);
     if (ZeroTLAB) {
       // the fields have been already cleared

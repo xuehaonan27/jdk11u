@@ -1170,13 +1170,7 @@ size_t CompactibleFreeListSpace::block_size(const HeapWord* p) const {//hua
   // This must be volatile, or else there is a danger that the compiler
   // will compile the code below into a sometimes-infinite loop, by keeping
   // the value read the first time in a register.
-  int count = 0;
   while (true) {
-    count += 1;
-    if (count >= 5){
-//      log_info(gc)("oop at %p", p);
-    }
-    assert(count < 5, "too many times");
     // We must do this until we get a consistent view of the object.
     if (FreeChunk::indicatesFreeChunk(p)) {
       volatile FreeChunk* fc = (volatile FreeChunk*)p;
@@ -1233,12 +1227,7 @@ const {
   // will compile the code below into a sometimes-infinite loop, by keeping
   // the value read the first time in a register.
   DEBUG_ONLY(uint loops = 0;)
-  int count = 0;
   while (true) {
-    count += 1;
-    if (count >= 5){
-//      log_info(gc)("oop at %p", p);
-    }
     // We must do this until we get a consistent view of the object.
     // log_info(gc)("block scan %p", p);
     if (FreeChunk::indicatesFreeChunk(p)) {
@@ -1264,15 +1253,9 @@ const {
       // Ensure klass read before size.
       Klass* k = oop(p)->klass_or_null_acquire();
       if (k != NULL) {
-        if (! k->is_klass()){
-          log_info(gc)("not klass, first two words: %lx, %lx", *(unsigned long*)p, *((unsigned long*)p+1));
-        }
         assert(k->is_klass(), "Should really be klass oop.");
         oop o = (oop)p;
         assert(oopDesc::is_oop(o), "Should be an oop");
-        if (! oopDesc::is_oop(o)){
-          log_info(gc)("not oop, first two words: %lx, %lx", *(unsigned long*)p, *((unsigned long*)p+1));
-        }
 
         size_t res = o->size_given_klass(k);
         res = adjustObjectSize(res);
