@@ -69,10 +69,11 @@ inline size_t ThreadLocalAllocBuffer::compute_size(size_t obj_size) {
   // unsafe_max_tlab_alloc is just a hint.
   const size_t available_size = Universe::heap()->unsafe_max_tlab_alloc(myThread()) /
                                                   HeapWordSize;
+  size_t new_tlab_size;                                                
   if (UseConcMarkSweepGC && UseMSOld) {
-    size_t new_tlab_size = MIN3(available_size, desired_size() + CompactibleFreeListSpace::adjustObjectSize(obj_size), max_size());
+    new_tlab_size = MIN3(available_size, desired_size() + CompactibleFreeListSpace::adjustObjectSize(obj_size), max_size());
   } else {
-    size_t new_tlab_size = MIN3(available_size, desired_size() + align_object_size(obj_size), max_size());
+    new_tlab_size = MIN3(available_size, desired_size() + align_object_size(obj_size), max_size());
   }
   // log_info(gc)("av %lu, desire %lu, max %lu", available_size, desired_size() + CompactibleFreeListSpace::adjustObjectSize(obj_size), max_size());
   // Make sure there's enough room for object and filler int[].

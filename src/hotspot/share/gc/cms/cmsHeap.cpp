@@ -301,7 +301,7 @@ size_t CMSHeap::tlab_capacity(Thread* thr) const {
     }
     return 0;
   } else {
-    return GenCollectedHeap::tlab_capacity();
+    return GenCollectedHeap::tlab_capacity(thr);
   }
 
 }
@@ -313,7 +313,7 @@ size_t CMSHeap::tlab_used(Thread* thr) const {
     }
     return 0;
   } else {
-    return GenCollectedHeap::tlab_used();
+    return GenCollectedHeap::tlab_used(thr);
   }
 }
 
@@ -324,7 +324,7 @@ size_t CMSHeap::unsafe_max_tlab_alloc(Thread* thr) const {
     }
     return 0;
   } else {
-    return GenCollectedHeap::unsafe_max_tlab_alloc();
+    return GenCollectedHeap::unsafe_max_tlab_alloc(thr);
   }
 
 }

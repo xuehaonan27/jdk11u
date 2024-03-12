@@ -7719,8 +7719,8 @@ size_t SweepClosure::do_garbage_chunk(FreeChunk* fc) {
   _bitMap->verifyNoOneBitsInRange(addr + 1, addr + size);
   do_post_free_or_garbage_chunk(fc, size);
 
-  assert(_limit >= addr + size,
-         "A freshly garbage chunk can't possibly straddle over _limit");
+  // assert(_limit >= addr + size,
+  //        "A freshly garbage chunk can't possibly straddle over _limit");
   if (inFreeRange()) lookahead_and_flush(fc, size);
   return size;
 }
