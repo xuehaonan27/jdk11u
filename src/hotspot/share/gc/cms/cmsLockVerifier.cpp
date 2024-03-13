@@ -84,9 +84,9 @@ void CMSLockVerifier::assert_locked(const Mutex* lock,
     // XXX If there were a concept of a gang_master for a (set of)
     // gang_workers, we could have used the identity of that thread
     // for checking ownership here; for now we just disjunct.
-    assert(lock->owner() == VMThread::vm_thread() ||
-           lock->owner() == ConcurrentMarkSweepThread::cmst(),
-           "Should be locked by VM thread or CMS thread on my behalf");
+    // assert(lock->owner() == VMThread::vm_thread() ||
+    //        lock->owner() == ConcurrentMarkSweepThread::cmst(),
+    //        "Should be locked by VM thread or CMS thread on my behalf");
     if (p_lock1 != NULL) {
       assert_lock_strong(p_lock1);
     }

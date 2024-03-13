@@ -141,6 +141,7 @@ protected:
                      size_t         size,
                      bool           is_tlab,
                      GenerationType max_generation);
+  virtual void do_old_collection();
   virtual void wait_for_background(uint _full_gc_count_before);
 
 

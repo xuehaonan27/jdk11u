@@ -576,6 +576,7 @@ class CompactibleFreeListSpace: public CompactibleSpace {
   void      removeFreeChunkFromFreeLists(FreeChunk* chunk);
   void      addChunkAndRepairOffsetTable(HeapWord* chunk, size_t size,
               bool coalesced);
+  void      addChunkAndRepairOffsetTableNoCheck(HeapWord* chunk, size_t size, bool coalesced);
 
   // Support for compaction.
   void prepare_for_compaction(CompactPoint* cp);

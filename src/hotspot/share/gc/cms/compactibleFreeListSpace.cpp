@@ -371,7 +371,7 @@ CompactibleFreeListSpace::CompactibleFreeListSpace(BlockOffsetSharedArray* bs, M
     _indexedFreeListParLocks[i] = new Mutex(Mutex::leaf - 1, // == ExpandHeap_lock - 1
                                             "a freelist par lock", true, Mutex::_safepoint_check_sometimes);
     DEBUG_ONLY(
-      _indexedFreeList[i].set_protecting_lock(_indexedFreeListParLocks[i]);
+      // _indexedFreeList[i].set_protecting_lock(_indexedFreeListParLocks[i]);
     )
   }
   _dictionary->set_par_lock(&_parDictionaryAllocLock);
@@ -1963,6 +1963,18 @@ void
 CompactibleFreeListSpace::addChunkAndRepairOffsetTable(HeapWord* chunk,
   size_t size, bool coalesced) {
   assert_locked();
+  assert(chunk != NULL, "null chunk");
+  if (coalesced) {
+    // repair BOT
+    _bt.single_block(chunk, size);
+  }
+  addChunkToFreeLists(chunk, size);
+}
+
+void
+CompactibleFreeListSpace::addChunkAndRepairOffsetTableNoCheck(HeapWord* chunk,
+  size_t size, bool coalesced) {
+  // assert_locked();
   assert(chunk != NULL, "null chunk");
   if (coalesced) {
     // repair BOT

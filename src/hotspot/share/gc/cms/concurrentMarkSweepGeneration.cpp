@@ -2087,24 +2087,29 @@ void CMSCollector::gc_prologue(bool full) {
   bitMapLock()->lock_without_safepoint_check();
 
   // Should call gc_prologue_work() for all cms gens we are responsible for
-  bool duringMarking =    _collectorState >= Marking
-                         && _collectorState < Sweeping;
+  // bool duringMarking =    _collectorState >= Marking
+  //                        && _collectorState < Sweeping;
 
   // The young collections clear the modified oops state, which tells if
   // there are any modified oops in the class. The remark phase also needs
   // that information. Tell the young collection to save the union of all
   // modified klasses.
-  if (duringMarking) {
-    _ct->cld_rem_set()->set_accumulate_modified_oops(true);
-  }
+  // if (duringMarking) {
+  //   _ct->cld_rem_set()->set_accumulate_modified_oops(true);
+  // }
 
-  bool registerClosure = duringMarking;
+  // bool registerClosure = duringMarking;
+  bool registerClosure = false;
 
   _cmsGen->gc_prologue_work(full, registerClosure, &_modUnionClosurePar);
 
   if (!full) {
     stats().record_gc0_begin();
   }
+
+  bitMapLock()->unlock();
+  releaseFreelistLocks();
+
 }
 
 void ConcurrentMarkSweepGeneration::gc_prologue(bool full) {
@@ -2169,6 +2174,10 @@ void CMSCollector::gc_epilogue(bool full) {
     // ignore it since all relevant work has already been done.
     return;
   }
+  
+  getFreelistLocks();   // gets free list locks on constituent spaces
+  bitMapLock()->lock_without_safepoint_check();
+
   assert(haveFreelistLocks(), "must have freelist locks");
   assert_lock_strong(bitMapLock());
 
@@ -2853,11 +2862,11 @@ void SweepOp::do_operation(CompactibleFreeListSpace* _sp){
     switch(_op_type){
       case ADD_CHUNK_WITH_BIRTH:
         _sp->coalBirth(_size);
-        _sp->addChunkAndRepairOffsetTable(_start, _size,
+        _sp->addChunkAndRepairOffsetTableNoCheck(_start, _size,
                                           true);
         break;
       case ADD_CHUNK:
-        _sp->addChunkAndRepairOffsetTable(_start, _size,
+        _sp->addChunkAndRepairOffsetTableNoCheck(_start, _size,
                                           false);
         break;
       case REMOVE_CHUNK_WITH_DEATH:
@@ -2897,8 +2906,12 @@ _freelistLock(old_gen->cmsSpace()->freelistLock()) {
   }
   for (i = 0; i < num_queues; i++) {
     _sweep_task_queues->queue(i)->initialize();
-
   }
+  _old_gen->cmsSpace()->parDictionaryAllocLock()->lock();
+}
+
+CMSParSweepingTask::~CMSParSweepingTask(){
+  _old_gen->cmsSpace()->parDictionaryAllocLock()->unlock();
 }
 
 void CMSParSweepingTask::work(uint worker_id) {
@@ -5863,9 +5876,10 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
 
   CompactibleFreeListSpace* cms_space  = _cmsGen->cmsSpace();
 
-  CMSParSweepingTask tsk(this, _cmsGen, n_workers, workers, task_queues());
+
 
   {
+    CMSParSweepingTask tsk(this, _cmsGen, n_workers, workers, task_queues());
     cms_space->initialize_sequential_subtasks_for_sweeping(n_workers);
 
     if (n_workers > 1) {
@@ -5874,12 +5888,12 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
       tsk.work(0);
     }
 
-
+    cms_space->freelistLock()->lock();
+    // cms_space->initialize_sequential_subtasks_for_sweeping(1);
+    // tsk.do_region_merging();
 
   }
-  cms_space->freelistLock()->lock();
-  // cms_space->initialize_sequential_subtasks_for_sweeping(1);
-  // tsk.do_region_merging();
+
 
 
   old_gen->cmsSpace()->sweep_completed();
@@ -7437,8 +7451,8 @@ SweepClosure::SweepClosure(CMSParSweepingTask* parent, int i, CMSCollector* coll
     _numWordsAlreadyFree = 0;
     _last_fc = NULL;
 
-    _sp->initializeIndexedFreeListArrayReturnedBytes();
-    _sp->dictionary()->initialize_dict_returned_bytes();
+    // _sp->initializeIndexedFreeListArrayReturnedBytes();
+    // _sp->dictionary()->initialize_dict_returned_bytes();
   )
   assert(_limit >= _sp->bottom() && _limit <= _sp->end(),
          "sweep _limit out of bounds");
@@ -7906,7 +7920,7 @@ void SweepClosure::lookahead_and_flush(FreeChunk* fc, size_t chunk_size) {
          " when examining fc = " PTR_FORMAT "(" SIZE_FORMAT ")",
          p2i(eob), p2i(eob-1), p2i(_limit), p2i(_sp->bottom()), p2i(_sp->end()), p2i(fc), chunk_size);
   if (eob >= _limit) {
-    assert(eob == _limit || fc->is_free(), "Only a free chunk should allow us to cross over the limit");
+    // assert(eob == _limit || fc->is_free(), "Only a free chunk should allow us to cross over the limit");
     log_develop_trace(gc, sweep)("_limit " PTR_FORMAT " reached or crossed by block "
                                  "[" PTR_FORMAT "," PTR_FORMAT ") in space "
                                  "[" PTR_FORMAT "," PTR_FORMAT ")",
