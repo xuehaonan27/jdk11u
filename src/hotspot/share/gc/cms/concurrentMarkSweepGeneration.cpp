@@ -2864,14 +2864,17 @@ void SweepOp::do_operation(CompactibleFreeListSpace* _sp){
         _sp->coalBirth(_size);
         _sp->addChunkAndRepairOffsetTable(_start, _size,
                                           true);
+        // log_info(gc)("add %p, size %lu", _start, _size);
         break;
       case ADD_CHUNK:
         _sp->addChunkAndRepairOffsetTable(_start, _size,
                                           false);
+        // log_info(gc)("add %p, size %lu", _start, _size);
         break;
       case REMOVE_CHUNK_WITH_DEATH:
         _sp->coalDeath(_size);
         _sp->removeFreeChunkFromFreeLists((FreeChunk*)_start);
+        // log_info(gc)("remove %p, size %lu", _start, _size);
         break;
     }
 }
@@ -5879,9 +5882,12 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
 
 
   {
+    //!!!hua: remove later
+    // cms_space->verifyFreeLists();
     CMSParSweepingTask tsk(this, _cmsGen, n_workers, workers, task_queues());
     cms_space->initialize_sequential_subtasks_for_sweeping(n_workers);
 
+    // cms_space->verifyFreeLists();
     if (n_workers > 1) {
       workers->run_task(&tsk);
     } else {
@@ -5889,6 +5895,7 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
     }
 
     cms_space->freelistLock()->lock();
+    // debug_only(cms_space->verifyFreeLists());
     // cms_space->initialize_sequential_subtasks_for_sweeping(1);
     // tsk.do_region_merging();
 
@@ -7568,6 +7575,7 @@ size_t SweepClosure::do_blk_careful(HeapWord* addr) {
   // previous _end of the space), so we may have stepped past _limit:
   // see the following Zeno-like trail of CRs 6977970, 7008136, 7042740.
   if (addr >= _limit) { // we have swept up to or past the limit: finish up
+    // log_info(gc)("do last flush");
     assert(_limit >= _sp->bottom() && _limit <= _sp->end(),
            "sweep _limit out of bounds");
     assert(addr < _sp->end(), "addr out of bounds");
@@ -7592,9 +7600,12 @@ size_t SweepClosure::do_blk_careful(HeapWord* addr) {
 //  do_yield_check(addr);
   if (fc->is_free()) {
     // Chunk that is already free
+    // log_info(gc)("do already free");
     res = fc->size();
+    debug_only(_sp->verifyFreeLists());
     do_already_free_chunk(fc);
     debug_only(_sp->verifyFreeLists());
+    // log_info(gc)("do already free finished");
     // If we flush the chunk at hand in lookahead_and_flush()
     // and it's coalesced with a preceding chunk, then the
     // process of "mangling" the payload of the coalesced block
@@ -7612,8 +7623,10 @@ size_t SweepClosure::do_blk_careful(HeapWord* addr) {
     NOT_PRODUCT(_last_fc = fc;)
   } else if (!_bitMap->isMarked(addr)) {
     // Chunk is fresh garbage
+    // log_info(gc)("do garbage");
     res = do_garbage_chunk(fc);
     debug_only(_sp->verifyFreeLists());
+    // log_info(gc)("do garbage finished");
     NOT_PRODUCT(
       _numObjectsFreed++;
       _numWordsFreed += res;
@@ -7621,8 +7634,12 @@ size_t SweepClosure::do_blk_careful(HeapWord* addr) {
   } else {
     // Chunk that is alive.
 //    log_info(gc)("do live chunk: %p", fc);
+    // log_info(gc)("do live");
+    debug_only(_sp->verifyFreeLists());
+    // log_info(gc)("do live pre verify");
     res = do_live_chunk(fc);
     debug_only(_sp->verifyFreeLists());
+    // log_info(gc)("do live finished");
     NOT_PRODUCT(
         _numObjectsLive++;
         _numWordsLive += res;
@@ -7679,6 +7696,8 @@ void SweepClosure::do_already_free_chunk(FreeChunk* fc) {
   // Chunks that cannot be coalesced are not in the
   // free lists.
   if (CMSTestInFreeList && !fc->cantCoalesce()) {
+    // log_info(gc)("verify free lists");
+    debug_only(_sp->verifyFreeLists());
     assert(_sp->verify_chunk_in_free_list(fc),
            "free chunk should be in free lists");
   }
@@ -7745,7 +7764,12 @@ size_t SweepClosure::do_live_chunk(FreeChunk* fc) {
   // left hand chunk to the free lists.
   if (inFreeRange()) {
     assert(freeFinger() < addr, "freeFinger points too high");
+    // log_info(gc)("before live flush");
+    // debug_only(_sp->verifyFreeLists());
     flush_cur_free_chunk(freeFinger(), pointer_delta(addr, freeFinger()));
+    // log_info(gc)("after live flush");
+    // debug_only(_sp->verifyFreeLists());
+    // log_info(gc)("after live flush verify");
   }
 
   // This object is live: we'd normally expect this to be
@@ -7942,6 +7966,7 @@ void SweepClosure::add_chunk(HeapWord* chunk, size_t size) {
   //                                       false);
   // _freelistLock->unlock();
   if(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK, chunk, size))){
+    log_info(gc)("add chunk overflow do operations");
     do_operations();
   }
 }
@@ -7953,6 +7978,7 @@ void SweepClosure::add_chunk_with_birth(HeapWord* chunk, size_t size) {
   //                                   true);
   // _freelistLock->unlock();
   if(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK_WITH_BIRTH, chunk, size))){
+    log_info(gc)("add chunk with birth overflow do operations");
     do_operations();
   }
 }
@@ -7969,16 +7995,23 @@ void SweepClosure::remove_chunk_with_death(HeapWord* chunk, size_t size){
 
 
 void SweepClosure::flush_cur_free_chunk(HeapWord* chunk, size_t size) {
+  // log_info(gc)("f1");
+  // debug_only(_sp->verifyFreeLists());
+
   assert(inFreeRange(), "Should only be called if currently in a free range.");
   assert(size > 0,
     "A zero sized chunk cannot be added to the free lists.");
   if (!freeRangeInFreeLists()) {
-    if (CMSTestInFreeList) {
-      FreeChunk* fc = (FreeChunk*) chunk;
-      fc->set_size(size);
-      assert(!_sp->verify_chunk_in_free_list(fc),
-             "chunk should not be in free lists yet");
-    }
+    // log_info(gc)("f2");
+    // debug_only(_sp->verifyFreeLists());
+
+    // if (CMSTestInFreeList) {
+    //   FreeChunk* fc = (FreeChunk*) chunk;
+    //   fc->set_size(size);
+    //   assert(!_sp->verify_chunk_in_free_list(fc),
+    //          "chunk should not be in free lists yet");
+    // }
+
     log_develop_trace(gc, sweep)(" -- add free block " PTR_FORMAT " (" SIZE_FORMAT ") to free lists", p2i(chunk), size);
     // A new free range is going to be starting.  The current
     // free range has not been added to the free lists yet or

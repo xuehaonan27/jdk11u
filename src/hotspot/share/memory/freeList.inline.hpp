@@ -274,6 +274,10 @@ bool FreeList<Chunk>::verify_chunk_in_free_list(Chunk* fc) const {
   Chunk* curFC = head();
   while (curFC) {
     // This is an internal consistency check.
+    if(size() != curFC->size()){
+      //!!!hua: remove later
+      log_info(gc)("wrong size, addr:%p, list:%lu, chunk:%lu", curFC, size(), curFC->size());
+    }
     guarantee(size() == curFC->size(), "Chunk is in wrong list.");
     if (fc == curFC) {
       return true;
