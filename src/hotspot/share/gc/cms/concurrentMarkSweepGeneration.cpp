@@ -2862,11 +2862,11 @@ void SweepOp::do_operation(CompactibleFreeListSpace* _sp){
     switch(_op_type){
       case ADD_CHUNK_WITH_BIRTH:
         _sp->coalBirth(_size);
-        _sp->addChunkAndRepairOffsetTableNoCheck(_start, _size,
+        _sp->addChunkAndRepairOffsetTable(_start, _size,
                                           true);
         break;
       case ADD_CHUNK:
-        _sp->addChunkAndRepairOffsetTableNoCheck(_start, _size,
+        _sp->addChunkAndRepairOffsetTable(_start, _size,
                                           false);
         break;
       case REMOVE_CHUNK_WITH_DEATH:
@@ -2907,7 +2907,7 @@ _freelistLock(old_gen->cmsSpace()->freelistLock()) {
   for (i = 0; i < num_queues; i++) {
     _sweep_task_queues->queue(i)->initialize();
   }
-  _old_gen->cmsSpace()->parDictionaryAllocLock()->lock();
+  _old_gen->cmsSpace()->parDictionaryAllocLock()->lock_without_safepoint_check();
 }
 
 CMSParSweepingTask::~CMSParSweepingTask(){

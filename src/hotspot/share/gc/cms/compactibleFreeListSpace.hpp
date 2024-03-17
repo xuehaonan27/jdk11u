@@ -210,7 +210,9 @@ class CompactibleFreeListSpace: public CompactibleSpace {
 
   // A lock protecting the dictionary during par promotion allocation.
   mutable Mutex _parDictionaryAllocLock;
+public:
   Mutex* parDictionaryAllocLock() const { return &_parDictionaryAllocLock; }
+private:
 
   // Locks protecting the exact lists during par promotion allocation.
   Mutex* _indexedFreeListParLocks[IndexSetSize];
@@ -576,7 +578,6 @@ class CompactibleFreeListSpace: public CompactibleSpace {
   void      removeFreeChunkFromFreeLists(FreeChunk* chunk);
   void      addChunkAndRepairOffsetTable(HeapWord* chunk, size_t size,
               bool coalesced);
-  void      addChunkAndRepairOffsetTableNoCheck(HeapWord* chunk, size_t size, bool coalesced);
 
   // Support for compaction.
   void prepare_for_compaction(CompactPoint* cp);

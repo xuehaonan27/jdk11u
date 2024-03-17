@@ -1971,18 +1971,6 @@ CompactibleFreeListSpace::addChunkAndRepairOffsetTable(HeapWord* chunk,
   addChunkToFreeLists(chunk, size);
 }
 
-void
-CompactibleFreeListSpace::addChunkAndRepairOffsetTableNoCheck(HeapWord* chunk,
-  size_t size, bool coalesced) {
-  // assert_locked();
-  assert(chunk != NULL, "null chunk");
-  if (coalesced) {
-    // repair BOT
-    _bt.single_block(chunk, size);
-  }
-  addChunkToFreeLists(chunk, size);
-}
-
 // We _must_ find the purported chunk on our free lists;
 // we assert if we don't.
 void

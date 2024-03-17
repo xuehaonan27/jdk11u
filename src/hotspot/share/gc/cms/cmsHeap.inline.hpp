@@ -120,7 +120,6 @@ void CMSHeap::do_collection(bool           full,
     return; // GC is disabled (e.g. JNI GetXXXCritical operation)
   }
 
-  GCIdMark gc_id_mark;
 
   const bool do_clear_all_soft_refs = clear_all_soft_refs ||
                                       soft_ref_policy()->should_clear_all_soft_refs();
@@ -161,18 +160,19 @@ void CMSHeap::do_collection(bool           full,
     bool collected_old = false;
 
     if (do_young_collection) {
+      GCIdMark gc_id_mark;
       if (run_verification && VerifyGCLevel <= 0 && VerifyBeforeGC) {
         prepare_for_verify();
         prepared_for_verification = true;
       }
 
-      // collect_generation(_young_gen,
-      //                     full,
-      //                     size,
-      //                     is_tlab,
-      //                     run_verification && VerifyGCLevel <= 0,
-      //                     do_clear_all_soft_refs,
-      //                     false);
+      collect_generation(_young_gen,
+                          full,
+                          size,
+                          is_tlab,
+                          run_verification && VerifyGCLevel <= 0,
+                          do_clear_all_soft_refs,
+                          false);
       // do_old_collection();
 
       if (size > 0 && (!is_tlab || _young_gen->supports_tlab_allocation()) &&
@@ -197,8 +197,8 @@ void CMSHeap::do_collection(bool           full,
 
       if (do_young_collection) {
         // We did a young GC. Need a new GC id for the old GC.
-        GCIdMark gc_id_mark;
-        GCTraceTime(Info, gc) t("Pause Full", NULL, gc_cause(), true);
+        // GCIdMark gc_id_mark;
+        // GCTraceTime(Info, gc) t("Pause Full", NULL, gc_cause(), true);
         do_old_collection();
         // collect_generation(_old_gen, full, size, is_tlab, run_verification && VerifyGCLevel <= 1, do_clear_all_soft_refs, true);
       } else {
@@ -239,9 +239,9 @@ void CMSHeap::do_collection(bool           full,
 
     gc_epilogue(complete);
 
-    if (must_restore_marks_for_biased_locking) {
-      BiasedLocking::restore_marks();
-    }
+    // if (must_restore_marks_for_biased_locking) {
+    //   BiasedLocking::restore_marks();
+    // }
   }
 
   print_heap_after_gc();

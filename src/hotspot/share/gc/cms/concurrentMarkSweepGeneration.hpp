@@ -119,6 +119,7 @@ public:
             uint n_workers, WorkGang* workers,
             OopTaskQueueSet* task_queues);
 //    _term(n_workers, task_queues){ }
+    ~CMSParSweepingTask();
 
     OopTaskQueueSet* task_queues() { return _task_queues; }
 

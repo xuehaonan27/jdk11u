@@ -56,7 +56,7 @@ void FreeChunk::mangleFreed(size_t sz) {
   assert(sz == size(), "just checking");
   HeapWord* addr = (HeapWord*)this;
   size_t hdr = header_size();
- log_info(gc)("mangle free chunk %p, from %p to %p", addr, addr + hdr, addr+sz);
+//  log_info(gc)("mangle free chunk %p, from %p to %p", addr, addr + hdr, addr+sz);
   Copy::fill_to_words(addr + hdr, sz - hdr, deadbeefHeapWord);
 }
 

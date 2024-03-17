@@ -93,10 +93,12 @@ private:
   // In support of ExplicitGCInvokesConcurrent functionality
   unsigned int _full_collections_completed;
 
+public:
   // Collects the given generation.
   void collect_generation(Generation* gen, bool full, size_t size, bool is_tlab,
                           bool run_verification, bool clear_soft_refs,
                           bool restore_marks_for_biased_locking);
+private:
 
   // Reserve aligned space for the heap as needed by the contained generations.
   char* allocate(size_t alignment, ReservedSpace* heap_rs);

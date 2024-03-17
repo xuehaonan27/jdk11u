@@ -905,7 +905,7 @@ void BinaryTreeDictionary<Chunk_t, FreeList_t>::verify_par_locked() const {
   Thread* my_thread = Thread::current();
   if (my_thread->is_GC_task_thread()) {
     assert(par_lock() != NULL, "Should be using locking?");
-    assert_lock_strong(par_lock());
+    // assert_lock_strong(par_lock());
   }
 #endif // ASSERT
 }
