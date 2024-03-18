@@ -7965,7 +7965,7 @@ void SweepClosure::add_chunk(HeapWord* chunk, size_t size) {
   // _sp->addChunkAndRepairOffsetTable(chunk, size,
   //                                       false);
   // _freelistLock->unlock();
-  if(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK, chunk, size))){
+  while(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK, chunk, size))){
     log_info(gc)("add chunk overflow do operations");
     do_operations();
   }
@@ -7977,7 +7977,7 @@ void SweepClosure::add_chunk_with_birth(HeapWord* chunk, size_t size) {
   // _sp->addChunkAndRepairOffsetTable(chunk, size,
   //                                   true);
   // _freelistLock->unlock();
-  if(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK_WITH_BIRTH, chunk, size))){
+  while(!work_queue()->push(SweepOp(SweepOp::ADD_CHUNK_WITH_BIRTH, chunk, size))){
     log_info(gc)("add chunk with birth overflow do operations");
     do_operations();
   }
@@ -7988,7 +7988,7 @@ void SweepClosure::remove_chunk_with_death(HeapWord* chunk, size_t size){
   // _sp->coalDeath(size);
   // _sp->removeFreeChunkFromFreeLists((FreeChunk*)chunk);
   // _freelistLock->unlock();
-  if(!work_queue()->push(SweepOp(SweepOp::REMOVE_CHUNK_WITH_DEATH, chunk, size))){
+  while(!work_queue()->push(SweepOp(SweepOp::REMOVE_CHUNK_WITH_DEATH, chunk, size))){
     do_operations();
   }
 }
