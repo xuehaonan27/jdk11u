@@ -1427,27 +1427,6 @@ void CMSCollector::acquire_control_and_collect(bool full,
   assert(!Thread::current()->is_ConcurrentGC_thread(),
          "shouldn't try to acquire control from self!");
 
-//  log_info(gc)("acquire control");
-//  if (Heap_lock->owner()->is_Java_thread()){
-//    log_info(gc)("is java thread");
-//  }
-//  if (Heap_lock->owner()->is_VM_thread()){
-//    log_info(gc)("is vm thread");
-//  }
-//  if (Heap_lock->owner()->is_GC_task_thread()){
-//    log_info(gc)("is gc task thread");
-//  }
-//  if (Heap_lock->owner()->is_ConcurrentGC_thread()){
-//    log_info(gc)("is gc task thread");
-//  }
-//  if (Heap_lock->owner()->is_Named_thread()){
-//    log_info(gc)("is named thread");
-//  }
-//  if (Heap_lock->owner()->is_Worker_thread()){
-//    log_info(gc)("is worker thread");
-//  }
-//  log_info(gc)("acquire control log end");
-
   // Start the protocol for acquiring control of the
   // collection from the background collector (aka CMS thread).
 //  assert(ConcurrentMarkSweepThread::vm_thread_has_cms_token(),
@@ -3055,32 +3034,32 @@ void CMSParSweepingTask::do_region_merging() {
 
           FreeChunk* fc1 = (FreeChunk*)prev_prev_obj;
 
-          {
-            size_t sz = sp->block_size_no_stall(prev_prev_obj, _collector);
-            assert(prev_prev_obj + sz == prev_obj, "wrong neighbor");
-            if(prev_prev_obj + sz != prev_obj){
-              ShouldNotReachHere();
-            }
-          }
+          // {
+          //   size_t sz = sp->block_size_no_stall(prev_prev_obj, _collector);
+          //   assert(prev_prev_obj + sz == prev_obj, "wrong neighbor");
+          //   if(prev_prev_obj + sz != prev_obj){
+          //     ShouldNotReachHere();
+          //   }
+          // }
           
           if(fc1->is_free() && !fc1->cantCoalesce()){
-            {
-              if(!sp->verify_chunk_in_free_list(fc2)){
-                log_info(gc)("wrong fc2");
-                ShouldNotReachHere();
-              }
+            // {
+            //   if(!sp->verify_chunk_in_free_list(fc2)){
+            //     log_info(gc)("wrong fc2");
+            //     ShouldNotReachHere();
+            //   }
 
-              if(!sp->verify_chunk_in_free_list(fc1)){
-                log_info(gc)("wrong fc1");
-                ShouldNotReachHere();
-              }
-            }
+            //   if(!sp->verify_chunk_in_free_list(fc1)){
+            //     log_info(gc)("wrong fc1");
+            //     ShouldNotReachHere();
+            //   }
+            // }
 
             size_t new_size = fc1->size()+fc2->size();
             size_t new_size2 = pointer_delta(prev_obj+fc2->size(), prev_prev_obj);
-            if(new_size != new_size2){
-               ShouldNotReachHere();
-            }
+            // if(new_size != new_size2){
+            //    ShouldNotReachHere();
+            // }
             // log_info(gc)("fc1 before: %lu", fc1->size());
             sp->coalDeath(fc1->size());
             sp->removeFreeChunkFromFreeLists(fc1);
@@ -7702,11 +7681,11 @@ void SweepClosure::do_already_free_chunk(FreeChunk* fc) {
            "free chunk should be in free lists");
   }
   //hua: remove later:
-  if (CMSTestInFreeListProduct && !fc->cantCoalesce()){
-    if(!_sp->verify_chunk_in_free_list(fc)){
-      ShouldNotReachHere();
-    }
-  }
+  // if (CMSTestInFreeListProduct && !fc->cantCoalesce()){
+  //   if(!_sp->verify_chunk_in_free_list(fc)){
+  //     ShouldNotReachHere();
+  //   }
+  // }
 
   // a chunk that is already free, should not have been
   // marked in the bit map
@@ -7824,11 +7803,11 @@ void SweepClosure::do_post_free_or_garbage_chunk(FreeChunk* fc,
   }
 
   //hua: remove later:
-  if (CMSTestInFreeListProduct && fcInFreeLists) {
-    if(!_sp->verify_chunk_in_free_list(fc)){
-      ShouldNotReachHere();
-    }
-  }
+  // if (CMSTestInFreeListProduct && fcInFreeLists) {
+  //   if(!_sp->verify_chunk_in_free_list(fc)){
+  //     ShouldNotReachHere();
+  //   }
+  // }
 
   log_develop_trace(gc, sweep)("  -- pick up another chunk at " PTR_FORMAT " (" SIZE_FORMAT ")", p2i(fc), chunkSize);
 
