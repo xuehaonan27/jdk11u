@@ -3032,7 +3032,7 @@ void CMSParSweepingTask::do_region_merging() {
           }
         }
         FreeChunk* fc2 = (FreeChunk*)prev_obj;
-        if (prev_obj < span.end() && fc2->is_free()){
+        if (prev_obj < span.end() && fc2->is_free() && !fc2->cantCoalesce()){
           if(prev_prev_obj == prev_obj){
             prev_prev_obj = sp->block_start_careful(span.start() - CardTable::card_size_in_words * BitsPerWord);
             while (prev_prev_obj < prev_obj) {
@@ -3063,7 +3063,7 @@ void CMSParSweepingTask::do_region_merging() {
             }
           }
           
-          if(fc1->is_free()){
+          if(fc1->is_free() && !fc1->cantCoalesce()){
             {
               if(!sp->verify_chunk_in_free_list(fc2)){
                 log_info(gc)("wrong fc2");
@@ -3185,7 +3185,7 @@ void CMSParSweepingTask::do_sweeping(int i, ConcurrentMarkSweepGeneration* old_g
         // iteration should be incremental with periodic yields.
          SweepClosure sweepClosure(this, i, _collector, old_gen, _collector->markBitMap(), my_span.end(), CMSYield,
                                    sweep_queue(i));//hua: here?
-         old_gen->cmsSpace()->blk_iterate_careful(&sweepClosure, my_span.start(), my_span.end());
+         old_gen->cmsSpace()->blk_iterate_careful(&sweepClosure, my_span.start());
 
         // log_info(gc)("%d: finish %p - %p", i, my_span.start(), my_span.end());
 //        ParMarkFromRootsClosure cl(this, _collector, my_span,
@@ -5896,8 +5896,8 @@ void CMSCollector::sweepWork(ConcurrentMarkSweepGeneration* old_gen) {
 
     cms_space->freelistLock()->lock();
     // debug_only(cms_space->verifyFreeLists());
-    // cms_space->initialize_sequential_subtasks_for_sweeping(1);
-    // tsk.do_region_merging();
+    cms_space->initialize_sequential_subtasks_for_sweeping(1);
+    tsk.do_region_merging();
 
   }
 

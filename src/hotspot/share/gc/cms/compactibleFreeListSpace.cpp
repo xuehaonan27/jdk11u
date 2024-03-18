@@ -971,11 +971,12 @@ void CompactibleFreeListSpace::blk_iterate_careful(BlkClosureCareful* cl) {
        cur += cl->do_blk_careful(cur));
 }
 
-void CompactibleFreeListSpace::blk_iterate_careful(BlkClosureCareful* cl, HeapWord* _start, HeapWord* _end) {
+void CompactibleFreeListSpace::blk_iterate_careful(BlkClosureCareful* cl, HeapWord* _start) {
   // assert_lock_strong(freelistLock());
-  HeapWord *cur;
-  assert(_start >= bottom() && _end <= end(), "incorrect range");
-  for (cur = _start; cur < _end;
+  HeapWord *cur, *limit;
+  assert(_start >= bottom(), "incorrect range");
+  //hua: there shouldn't be an end because this is only used for parallel sweeping and it needs a signal of going out of range.
+  for (cur = _start, limit = end(); cur < limit;
        cur += cl->do_blk_careful(cur));
 }
 
