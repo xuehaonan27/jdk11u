@@ -1414,6 +1414,53 @@ void os::Linux::capture_initial_stack(size_t max_size) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// [gc breakdown] gc breakdown support
+static inline unsigned long proc_majflt(const char* fname) {
+  // Get the majflt field from /proc/<pid>/<tid>/stat
+  char *s;
+  char stat[2048];
+  int statlen;
+  int count;
+  long majflt;
+  char cdummy;
+  int idummy;
+  long ldummy;
+  FILE *fp;
+
+  fp = os::fopen(fname, "r");
+  if (fp == NULL) return 0ul;
+  statlen = fread(stat, 1, 2047, fp);
+  stat[statlen] = '\0';
+  fclose(fp);
+
+  // Skip pid and the command string. Note that we could be dealing with
+  // weird command names, e.g. user could decide to rename java launcher
+  // to "java 1.4.2 :)", then the stat file would look like
+  //                1234 (java 1.4.2 :)) R ... ...
+  // We don't really need to know the command string, just find the last
+  // occurrence of ")" and then start parsing from there. See bug 4726580.
+  s = strrchr(stat, ')');
+  if (s == NULL) return 0ul;
+
+  // Skip blank chars
+  do { s++; } while (s && isspace(*s));
+
+  count = sscanf(s,"%c %d %d %d %d %d %lu %lu %lu %lu",
+                 &cdummy, &idummy, &idummy, &idummy, &idummy, &idummy,
+                 &ldummy, &ldummy, &ldummy, &majflt);
+  if (count == 12 - 2) {
+    return majflt;
+  } else {
+    return 0ul;
+  }
+}
+
+// Error will return 0
+unsigned long os::accumMajflt() {
+  return proc_majflt("/proc/self/stat");
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // time support
 
 // Time since start-up in seconds to a fine granularity.

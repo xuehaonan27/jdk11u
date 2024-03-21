@@ -280,6 +280,9 @@ class os: AllStatic {
   // Give a name to the current thread.
   static void set_native_thread_name(const char *name);
 
+  // [gc breakdown] Return the number of page major fault of the process.
+  static unsigned long accumMajflt();
+
   // Interface for stack banging (predetect possible stack overflow for
   // exception processing)  There are guard pages, and above that shadow
   // pages for stack overflow checking.

@@ -841,6 +841,7 @@ void ParNewGeneration::handle_promotion_failed(CMSHeap* gch, ParScanThreadStateS
   // All the spaces are in play for mark-sweep.
   swap_spaces();  // Make life simpler for CMS || rescan; see 6483690.
   from()->set_next_compaction_space(to());
+  log_info(gc)("set incremental 1");
   gch->set_incremental_collection_failed();
   // Inform the next generation that a promotion failure occurred.
   _old_gen->promotion_failure_occurred();
@@ -865,6 +866,9 @@ void ParNewGeneration::collect(bool   full,
 
   _gc_timer->register_gc_start();
 
+  // [gc breakdown]
+  unsigned long _start_majflt = os::accumMajflt();
+
   AdaptiveSizePolicy* size_policy = gch->size_policy();
   WorkGang* workers = gch->workers();
   assert(workers != NULL, "Need workgang for parallel work");
@@ -881,10 +885,13 @@ void ParNewGeneration::collect(bool   full,
   // from this generation, pass on collection; let the next generation
   // do it.
   if (!collection_attempt_is_safe()) {
-    gch->set_incremental_collection_failed();  // slight lie, in that we did not even attempt one
-    return;
+    // log_info(gc)("set incremental 2");
+    // gch->set_incremental_collection_failed();  // slight lie, in that we did not even attempt one
+    // return;
+  } else {
+    assert(to()->is_empty(), "Else not collection_attempt_is_safe");
   }
-  assert(to()->is_empty(), "Else not collection_attempt_is_safe");
+  
 
   _gc_tracer.report_gc_start(gch->gc_cause(), _gc_timer->gc_start());
   gch->trace_heap_before_gc(gc_tracer());
@@ -899,7 +906,9 @@ void ParNewGeneration::collect(bool   full,
   GCTraceTime(Trace, gc, phases) t1("ParNew", NULL, gch->gc_cause());
 
   age_table()->clear();
-  to()->clear(SpaceDecorator::Mangle);
+  if (collection_attempt_is_safe()) {
+    to()->clear(SpaceDecorator::Mangle);
+  }
 
   gch->save_marks();
 
@@ -1040,6 +1049,10 @@ void ParNewGeneration::collect(bool   full,
   _gc_timer->register_gc_end();
 
   _gc_tracer.report_gc_end(_gc_timer->gc_end(), _gc_timer->time_partitions());
+
+  unsigned long _end_majflt = os::accumMajflt();
+  log_info(gc)("Majflt(young)=%ld (%ld -> %ld)", _end_majflt - _start_majflt , _start_majflt, _end_majflt);
+
 }
 
 size_t ParNewGeneration::desired_plab_sz() {

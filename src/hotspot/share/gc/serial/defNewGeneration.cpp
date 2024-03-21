@@ -564,6 +564,7 @@ void DefNewGeneration::collect(bool   full,
   // do it.
   if (!collection_attempt_is_safe()) {
     log_trace(gc)(":: Collection attempt not safe ::");
+    log_info(gc)("set incremental 3");
     heap->set_incremental_collection_failed(); // Slight lie: we did not even attempt one
     return;
   }
@@ -675,6 +676,7 @@ void DefNewGeneration::collect(bool   full,
     // and from-space.
     swap_spaces();   // For uniformity wrt ParNewGeneration.
     from()->set_next_compaction_space(to());
+    log_info(gc)("set incremental 4");
     heap->set_incremental_collection_failed();
 
     // Inform the next generation that a promotion failure occurred.
@@ -839,6 +841,7 @@ void DefNewGeneration::reset_scratch() {
 
 bool DefNewGeneration::collection_attempt_is_safe() {
   if (!to()->is_empty()) {
+    log_info(gc)("to is not empty");
     log_trace(gc)(":: to is not empty ::");
     return false;
   }
@@ -846,6 +849,10 @@ bool DefNewGeneration::collection_attempt_is_safe() {
     GenCollectedHeap* gch = GenCollectedHeap::heap();
     _old_gen = gch->old_gen();
   }
+  if(!_old_gen->promotion_attempt_is_safe(used())){
+    log_info(gc)("old promotion is not safe");
+  }
+  
   return _old_gen->promotion_attempt_is_safe(used());
 }
 
@@ -863,8 +870,9 @@ void DefNewGeneration::gc_epilogue(bool full) {
     if (!collection_attempt_is_safe() && !_eden_space->is_empty()) {
       log_trace(gc)("DefNewEpilogue: cause(%s), full, not safe, set_failed, set_alloc_from, clear_seen",
                             GCCause::to_string(gch->gc_cause()));
-      gch->set_incremental_collection_failed(); // Slight lie: a full gc left us in that state
-      set_should_allocate_from_space(); // we seem to be running out of space
+      log_info(gc)("set incremental 5");
+      // gch->set_incremental_collection_failed(); // Slight lie: a full gc left us in that state
+      // set_should_allocate_from_space(); // we seem to be running out of space
     } else {
       log_trace(gc)("DefNewEpilogue: cause(%s), full, safe, clear_failed, clear_alloc_from, clear_seen",
                             GCCause::to_string(gch->gc_cause()));

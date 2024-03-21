@@ -462,6 +462,7 @@ public:
     return _incremental_collection_failed;
   }
   void set_incremental_collection_failed() {
+    log_info(gc)("set incremental inside");
     _incremental_collection_failed = true;
   }
   void clear_incremental_collection_failed() {

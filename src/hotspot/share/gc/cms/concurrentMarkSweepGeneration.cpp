@@ -1739,6 +1739,7 @@ class ReleaseForegroundGC: public StackObj {
 
 void CMSCollector::collect_in_background(GCCause::Cause cause) {
 
+  unsigned long _start_majflt = os::accumMajflt();
   CMSHeap* heap = CMSHeap::heap();
   {
     bool safepoint_check = Mutex::_no_safepoint_check_flag;
@@ -1886,6 +1887,7 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
       case Sweeping:
         // final marking in checkpointRootsFinal has been completed
         sweep();
+        log_info(gc)("increment 11 %d", heap->incremental_collection_failed()?1:0);
         assert(_collectorState == Resizing, "Collector state change "
           "to Resizing must be done under the free_list_lock");
 
@@ -1952,7 +1954,11 @@ void CMSCollector::collect_in_background(GCCause::Cause cause) {
                        p2i(Thread::current()), _collectorState);
   log_info(gc, heap)("Old: " SIZE_FORMAT "K->" SIZE_FORMAT "K("  SIZE_FORMAT "K)",
                      prev_used / K, _cmsGen->used()/K, _cmsGen->capacity() /K);
+  unsigned long _end_majflt = os::accumMajflt();
+  log_info(gc)("Majflt(full)=%ld (%ld -> %ld)", _end_majflt - _start_majflt , _start_majflt, _end_majflt);
+  log_info(gc)("increment 12 %d", heap->incremental_collection_failed()?1:0);
   heap->update_full_collections_completed();
+  
 }
 
 void CMSCollector::register_gc_start(GCCause::Cause cause) {
@@ -5765,6 +5771,7 @@ void CMSCollector::sweep() {
   // the flag will be set again when a young collection is
   // attempted.
   CMSHeap* heap = CMSHeap::heap();
+  log_info(gc)("heap->clear_incremental_collection_failed()");
   heap->clear_incremental_collection_failed();  // Worth retrying as fresh space may have been freed up
 //  heap->update_full_collections_completed(_collection_count_start);
 }

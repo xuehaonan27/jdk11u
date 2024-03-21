@@ -219,6 +219,7 @@ void CMSHeap::do_collection(bool           full,
     print_heap_change(young_prev_used, old_prev_used);
     MetaspaceUtils::print_metaspace_change(prev_meta_sizes);
 
+    log_info(gc)("increment 20 %d", incremental_collection_failed()?1:0);
     // Adjust generation sizes.
     if (collected_old) {
       _old_gen->compute_new_size();
@@ -237,6 +238,7 @@ void CMSHeap::do_collection(bool           full,
     // Track memory usage and detect low memory after GC finishes
     MemoryService::track_memory_usage();
 
+    log_info(gc)("increment 21 %d", incremental_collection_failed()?1:0);
     gc_epilogue(complete);
 
     // if (must_restore_marks_for_biased_locking) {
@@ -249,6 +251,8 @@ void CMSHeap::do_collection(bool           full,
   #ifdef TRACESPINNING
   ParallelTaskTerminator::print_termination_counts();
   #endif
+
+  log_info(gc)("increment 22 %d", incremental_collection_failed()?1:0);
 }
 
 #endif // SHARE_GC_CMS_CMSHEAP_INLINE_HPP
