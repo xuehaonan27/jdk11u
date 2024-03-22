@@ -532,7 +532,8 @@ CMSCollector::CMSCollector(ConcurrentMarkSweepGeneration* cmsGen,
   if (CMSConcurrentMTEnabled) {
     if (FLAG_IS_DEFAULT(ConcGCThreads)) {
       // just for now
-      FLAG_SET_DEFAULT(ConcGCThreads, (ParallelGCThreads + 3) / 4);
+      // FLAG_SET_DEFAULT(ConcGCThreads, (ParallelGCThreads + 3) / 4);
+      FLAG_SET_DEFAULT(ConcGCThreads, ParallelGCThreads);
     }
     if (ConcGCThreads > 1) {
       _conc_workers = new YieldingFlexibleWorkGang("CMS Thread",
