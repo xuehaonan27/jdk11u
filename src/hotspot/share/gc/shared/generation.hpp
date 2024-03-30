@@ -246,6 +246,9 @@ class Generation: public CHeapObj<mtGC> {
     return result;
   }
 
+  virtual void print_size_info(){
+  }
+
   // Allocate and returns a block of the requested size, or returns "NULL".
   // Assumes the caller has done any necessary locking.
   virtual HeapWord* allocate(size_t word_size, bool is_tlab) = 0;

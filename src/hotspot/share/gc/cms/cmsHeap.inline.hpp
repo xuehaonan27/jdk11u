@@ -142,8 +142,8 @@ void CMSHeap::do_collection(bool           full,
       gc_string.append("Full");
     }
 
-    GCTraceCPUTime tcpu;
-    GCTraceTime(Info, gc) t(gc_string, NULL, gc_cause(), true);
+    // GCTraceCPUTime tcpu;
+    // GCTraceTime(Info, gc) t(gc_string, NULL, gc_cause(), true);
 
     
     gc_prologue(complete);
@@ -161,6 +161,8 @@ void CMSHeap::do_collection(bool           full,
 
     if (do_young_collection) {
       GCIdMark gc_id_mark;
+      GCTraceCPUTime tcpu;
+      GCTraceTime(Info, gc) t(gc_string, NULL, gc_cause(), true);
       if (run_verification && VerifyGCLevel <= 0 && VerifyBeforeGC) {
         prepare_for_verify();
         prepared_for_verification = true;
@@ -198,7 +200,6 @@ void CMSHeap::do_collection(bool           full,
       if (do_young_collection) {
         // We did a young GC. Need a new GC id for the old GC.
         // GCIdMark gc_id_mark;
-        // GCTraceTime(Info, gc) t("Pause Full", NULL, gc_cause(), true);
         do_old_collection();
         // collect_generation(_old_gen, full, size, is_tlab, run_verification && VerifyGCLevel <= 1, do_clear_all_soft_refs, true);
       } else {

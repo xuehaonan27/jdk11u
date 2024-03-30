@@ -42,6 +42,7 @@
   product(bool, UseCMSBestFit, true,                                        \
           "Use CMS best fit allocation strategy")                           \
   product(bool, UseMSOld, true, "Use only the ms old generation")           \
+  product(bool, UseFullParNewGC, false, "Use only the parnew generation")   \
   product(size_t, CMSOldPLABMax, 1024,                                      \
           "Maximum size of CMS gen promotion LAB caches per worker "        \
           "per block size")                                                 \
@@ -204,7 +205,7 @@
           "Size (in cards) of CMS parallel rescan task")                    \
           range(1, SIZE_MAX / 4096)                                         \
           constraint(CMSRescanMultipleConstraintFunc,AfterMemoryInit)       \
-  product(size_t, CMSSweepingMultiple, 256,                                \
+  product(size_t, CMSSweepingMultiple, 256,                                 \
           "Size (in cards) of CMS parallel rescan task")                    \
           range(1, SIZE_MAX / 4096)                                         \
           constraint(CMSSweepingMultipleConstraintFunc,AfterMemoryInit)     \

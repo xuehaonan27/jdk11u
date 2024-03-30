@@ -35,6 +35,8 @@
 #include "runtime/mutexLocker.hpp"
 #include "runtime/os.hpp"
 #include "runtime/vmThread.hpp"
+#include "gc/shared/gcTrace.hpp"
+#include "gc/shared/gcTraceTime.inline.hpp"
 
 // ======= Concurrent Mark Sweep Thread ========
 
@@ -81,6 +83,8 @@ void ConcurrentMarkSweepThread::run_service() {
     GCIdMark gc_id_mark;
     GCCause::Cause cause = _collector->_full_gc_requested ?
       _collector->_full_gc_cause : GCCause::_cms_concurrent_mark;
+    GCTraceCPUTime tcpu;
+    GCTraceTime(Info, gc) t("Pause Full", NULL, cause, true);
     _collector->collect_in_background(cause);
   }
 

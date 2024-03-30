@@ -253,9 +253,12 @@ unsigned int GenCollectedHeap::update_full_collections_completed(unsigned int co
 //   was a full collection because a partial collection (would
 //   have) failed and is likely to fail again
 bool GenCollectedHeap::should_try_older_generation_allocation(size_t word_size) const {
+  if (UseFullParNewGC) {
+    return false;
+  }
   size_t young_capacity = _young_gen->capacity_before_gc();
-  log_info(gc)("size %d lock %d increment %d", (word_size > heap_word_size(young_capacity))?1:0,  GCLocker::is_active_and_needs_gc()?1:0,
-    incremental_collection_failed()?1:0);
+  // log_info(gc)("size %d lock %d increment %d", (word_size > heap_word_size(young_capacity))?1:0,  GCLocker::is_active_and_needs_gc()?1:0,
+    // incremental_collection_failed()?1:0);
   return    (word_size > heap_word_size(young_capacity))
          || GCLocker::is_active_and_needs_gc()
          || incremental_collection_failed();
@@ -263,7 +266,7 @@ bool GenCollectedHeap::should_try_older_generation_allocation(size_t word_size) 
 
 HeapWord* GenCollectedHeap::expand_heap_and_allocate(size_t size, bool   is_tlab) {
   HeapWord* result = NULL;
-  if (_old_gen->should_allocate(size, is_tlab)) {
+  if (!UseFullParNewGC && _old_gen->should_allocate(size, is_tlab)) {
     result = _old_gen->expand_and_allocate(size, is_tlab);
   }
   if (result == NULL) {
@@ -438,13 +441,15 @@ HeapWord* GenCollectedHeap::attempt_allocation(size_t size,
   HeapWord* res = NULL;
 
   if (_young_gen->should_allocate(size, is_tlab)) {
+    // log_info(gc)("young should allocate");
     res = _young_gen->allocate(size, is_tlab);
     if (res != NULL || first_only) {
       return res;
     }
   }
 
-  if (_old_gen->should_allocate(size, is_tlab)) {
+  if (!UseFullParNewGC && _old_gen->should_allocate(size, is_tlab)) {
+    // log_info(gc)("old should allocate");
     res = _old_gen->allocate(size, is_tlab);
   }
 
@@ -729,7 +734,7 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
                   false,                     // clear_all_soft_refs
                   size,                      // size
                   is_tlab,                   // is_tlab
-                  GenCollectedHeap::OldGen); // max_generation
+                  UseFullParNewGC?GenCollectedHeap::YoungGen:GenCollectedHeap::OldGen); // max_generation
    log_info(gc)("do collection 1 complete");
    log_info(gc)("increment 3 %d", incremental_collection_failed()?1:0);
   } else {
@@ -743,7 +748,7 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
                   false,                     // clear_all_soft_refs
                   size,                      // size
                   is_tlab,                   // is_tlab
-                  GenCollectedHeap::OldGen); // max_generation
+                  UseFullParNewGC?GenCollectedHeap::YoungGen:GenCollectedHeap::OldGen); // max_generation
    log_info(gc)("do collection 2 complete");
    log_info(gc)("increment 4 %d", incremental_collection_failed()?1:0);
   }
@@ -778,7 +783,7 @@ HeapWord* GenCollectedHeap::satisfy_failed_allocation(size_t size, bool is_tlab)
                   true,                      // clear_all_soft_refs
                   size,                      // size
                   is_tlab,                   // is_tlab
-                  GenCollectedHeap::OldGen); // max_generation
+                  UseFullParNewGC?GenCollectedHeap::YoungGen:GenCollectedHeap::OldGen); // max_generation
    log_info(gc)("do collection 3 complete");
    log_info(gc)("increment 7 %d", incremental_collection_failed()?1:0);
   }
@@ -1312,6 +1317,7 @@ void GenCollectedHeap::print_tracing_info() const {
 void GenCollectedHeap::print_heap_change(size_t young_prev_used, size_t old_prev_used) const {
   log_info(gc, heap)("%s: " SIZE_FORMAT "K->" SIZE_FORMAT "K("  SIZE_FORMAT "K)",
                      _young_gen->short_name(), young_prev_used / K, _young_gen->used() /K, _young_gen->capacity() /K);
+  _young_gen->print_size_info();
   log_info(gc, heap)("%s: " SIZE_FORMAT "K->" SIZE_FORMAT "K("  SIZE_FORMAT "K)",
                      _old_gen->short_name(), old_prev_used / K, _old_gen->used() /K, _old_gen->capacity() /K);
 }

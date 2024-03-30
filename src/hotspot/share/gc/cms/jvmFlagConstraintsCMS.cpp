@@ -161,6 +161,9 @@ JVMFlag::Error CMSRescanMultipleConstraintFunc(size_t value, bool verbose) {
 }
 
 JVMFlag::Error CMSSweepingMultipleConstraintFunc(size_t value, bool verbose) {
+  if (UseFullParNewGC){
+    return JVMFlag::SUCCESS;
+  }
   JVMFlag::Error status = CMSReservedAreaConstraintFunc("CMSSweepingMultiple", value, verbose);
 
   if (status == JVMFlag::SUCCESS && UseConcMarkSweepGC) {

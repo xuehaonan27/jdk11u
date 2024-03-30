@@ -1123,7 +1123,7 @@ oop ParNewGeneration::copy_to_survivor_space(ParScanThreadState* par_scan_state,
   oop forward_ptr;
 
   // Try allocating obj in to-space (unless too old)
-  if (dummyOld.age() < tenuring_threshold()) {
+  if (UseFullParNewGC || dummyOld.age() < tenuring_threshold()) {
     new_obj = (oop)par_scan_state->alloc_in_to_space(sz);
     if (new_obj == NULL) {
       set_survivor_overflow(true);
@@ -1141,7 +1141,7 @@ oop ParNewGeneration::copy_to_survivor_space(ParScanThreadState* par_scan_state,
         return real_forwardee(old);
     }
 
-    if (!_promotion_failed) {
+    if (!UseFullParNewGC && !_promotion_failed) {
       new_obj = _old_gen->par_promote(par_scan_state->thread_num(),
                                       old, m, sz);
     }
@@ -1165,7 +1165,9 @@ oop ParNewGeneration::copy_to_survivor_space(ParScanThreadState* par_scan_state,
     // Restore the mark word copied above.
     new_obj->set_mark_raw(m);
     // Increment age if obj still in new generation
-    new_obj->incr_age();
+    if(!UseFullParNewGC){
+      new_obj->incr_age();
+    }
     par_scan_state->age_table()->add(new_obj, sz);
   }
   assert(new_obj != NULL, "just checking");

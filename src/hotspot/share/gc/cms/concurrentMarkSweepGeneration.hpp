@@ -1147,6 +1147,14 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
  public:
   ConcurrentMarkSweepGeneration(ReservedSpace rs, size_t initial_byte_size, CardTableRS* ct);
 
+  virtual bool should_allocate(size_t word_size, bool is_tlab) {
+    if (UseFullParNewGC){
+      return false;
+    } else {
+      return CardGeneration::should_allocate(word_size, is_tlab);
+    }
+  }
+
   // Accessors
   CMSCollector* collector() const { return _collector; }
   static void set_collector(CMSCollector* collector) {

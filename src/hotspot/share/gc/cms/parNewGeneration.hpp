@@ -386,9 +386,20 @@ class ParNewGeneration: public DefNewGeneration {
     if (UseConcMarkSweepGC && UseMSOld) {
       assert(UseTLAB || !is_tlab, "Should not allocate tlab");
       return false;
-    } else {
+    } else if (UseFullParNewGC){
+      return true;
+    }
+    else {
       return DefNewGeneration::should_allocate(word_size, is_tlab);
     }
+  }
+
+  virtual void print_size_info(){
+    log_info(gc)("ParNew: Eden %luK(%luK), From %luK(%luK), To %luK(%luK)", 
+      eden()->used()/K, eden()->capacity()/K,
+      from()->used()/K, from()->capacity()/K,
+      to()->used()/K, to()->capacity()/K
+    );
   }
 
   // This needs to be visible to the closure function.
