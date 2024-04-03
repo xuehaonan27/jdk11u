@@ -168,6 +168,7 @@ void CMSHeap::do_collection(bool           full,
         prepared_for_verification = true;
       }
 
+      ((ConcurrentMarkSweepGeneration*)_old_gen)->collector()->getFreelistLocks();
       collect_generation(_young_gen,
                           full,
                           size,
@@ -175,6 +176,7 @@ void CMSHeap::do_collection(bool           full,
                           run_verification && VerifyGCLevel <= 0,
                           do_clear_all_soft_refs,
                           false);
+      ((ConcurrentMarkSweepGeneration*)_old_gen)->collector()->releaseFreelistLocks();
       // do_old_collection();
 
       if (size > 0 && (!is_tlab || _young_gen->supports_tlab_allocation()) &&
