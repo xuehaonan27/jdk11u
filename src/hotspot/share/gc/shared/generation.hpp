@@ -69,6 +69,7 @@ class ScanClosure;
 class FastScanClosure;
 class GenCollectedHeap;
 class GCStats;
+class ParScanThreadState;
 
 // A "ScratchBlock" represents a block of memory in one generation usable by
 // another.  It represents "num_words" free words, starting at and including
@@ -494,6 +495,8 @@ class Generation: public CHeapObj<mtGC> {
   // generations. Objects allocated since the last "save_marks" call are
   // excluded.
   virtual void younger_refs_iterate(OopsInGenClosure* cl, uint n_threads) = 0;
+
+  virtual void younger_refs_iterate(OopsInGenClosure* cl, uint n_threads, ParScanThreadState *pts) = 0;
 
   // Inform a generation that it longer contains references to objects
   // in any younger generation.    [e.g. Because younger gens are empty,

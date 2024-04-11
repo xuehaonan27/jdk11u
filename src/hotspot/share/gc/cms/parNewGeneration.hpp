@@ -156,6 +156,7 @@ class ParScanThreadState {
 
   // Decrease queue size below "max_size".
   void trim_queues(int max_size);
+  void trim_queues_cond();
 
   // Private overflow stack usage
   Stack<oop, mtGC>* overflow_stack() { return _overflow_stack; }

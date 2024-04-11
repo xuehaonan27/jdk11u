@@ -328,3 +328,108 @@ size_t CMSHeap::unsafe_max_tlab_alloc(Thread* thr) const {
   }
 
 }
+
+void CMSHeap::young_process_roots(StrongRootsScope* scope,
+                                           OopsInGenClosure* root_closure,
+                                           OopsInGenClosure* old_gen_closure,
+                                           CLDClosure* cld_closure,
+                                           OopStorage::ParState<false, false>* par_state_string,
+                                  ParScanThreadState* par_scan_state) {
+  MarkingCodeBlobClosure mark_code_closure(root_closure, CodeBlobToOopClosure::FixRelocations);
+
+  process_roots(scope, SO_ScavengeCodeCache, root_closure,
+                cld_closure, cld_closure, &mark_code_closure, par_scan_state);
+  process_string_table_roots(scope, root_closure, par_state_string);
+
+  if (!_process_strong_tasks->is_task_claimed(GCH_PS_younger_gens)) {
+    root_closure->reset_generation();
+  }
+
+  // When collection is parallel, all threads get to cooperate to do
+  // old generation scanning.
+  old_gen_closure->set_generation(_old_gen);
+  rem_set()->younger_refs_iterate(_old_gen, old_gen_closure, scope->n_threads());
+  old_gen_closure->reset_generation();
+
+  _process_strong_tasks->all_tasks_completed(scope->n_threads());
+}
+
+void CMSHeap::process_roots(StrongRootsScope* scope,
+                                     ScanningOption so,
+                                     OopClosure* strong_roots,
+                                     CLDClosure* strong_cld_closure,
+                                     CLDClosure* weak_cld_closure,
+                                     CodeBlobToOopClosure* code_roots,
+                                     ParScanThreadState* par_scan_state) {
+  // General roots.
+  assert(Threads::thread_claim_parity() != 0, "must have called prologue code");
+  assert(code_roots != NULL, "code root closure should always be set");
+  // _n_termination for _process_strong_tasks should be set up stream
+  // in a method not running in a GC worker.  Otherwise the GC worker
+  // could be trying to change the termination condition while the task
+  // is executing in another GC worker.
+
+  if (!_process_strong_tasks->is_task_claimed(GCH_PS_ClassLoaderDataGraph_oops_do)) {
+    ClassLoaderDataGraph::roots_cld_do(strong_cld_closure, weak_cld_closure);
+    par_scan_state->trim_queues(GCDrainStackTargetSize);
+  }
+
+  // Only process code roots from thread stacks if we aren't visiting the entire CodeCache anyway
+  CodeBlobToOopClosure* roots_from_code_p = (so & SO_AllCodeCache) ? NULL : code_roots;
+
+  bool is_par = scope->n_threads() > 1;
+  Threads::possibly_parallel_oops_do(is_par, strong_roots, roots_from_code_p);
+
+  if (!_process_strong_tasks->is_task_claimed(GCH_PS_Universe_oops_do)) {
+    Universe::oops_do(strong_roots);
+    par_scan_state->trim_queues(GCDrainStackTargetSize);
+  }
+  // Global (strong) JNI handles
+  if (!_process_strong_tasks->is_task_claimed(GCH_PS_JNIHandles_oops_do)) {
+    JNIHandles::oops_do(strong_roots);
+    par_scan_state->trim_queues(GCDrainStackTargetSize);
+  }
+
+  if (!_process_strong_tasks->is_task_claimed(GCH_PS_ObjectSynchronizer_oops_do)) {
+    ObjectSynchronizer::oops_do(strong_roots);
+    par_scan_state->trim_queues(GCDrainStackTargetSize);
+  }
+  if (!_process_strong_tasks->is_task_claimed(GCH_PS_Management_oops_do)) {
+    Management::oops_do(strong_roots);
+    par_scan_state->trim_queues(GCDrainStackTargetSize);
+  }
+  if (!_process_strong_tasks->is_task_claimed(GCH_PS_jvmti_oops_do)) {
+    JvmtiExport::oops_do(strong_roots);
+    par_scan_state->trim_queues(GCDrainStackTargetSize);
+  }
+  if (UseAOT && !_process_strong_tasks->is_task_claimed(GCH_PS_aot_oops_do)) {
+    AOTLoader::oops_do(strong_roots);
+    par_scan_state->trim_queues(GCDrainStackTargetSize);
+  }
+
+  if (!_process_strong_tasks->is_task_claimed(GCH_PS_SystemDictionary_oops_do)) {
+    SystemDictionary::oops_do(strong_roots);
+    par_scan_state->trim_queues(GCDrainStackTargetSize);
+  }
+
+  if (!_process_strong_tasks->is_task_claimed(GCH_PS_CodeCache_oops_do)) {
+    if (so & SO_ScavengeCodeCache) {
+      assert(code_roots != NULL, "must supply closure for code cache");
+
+      // We only visit parts of the CodeCache when scavenging.
+      CodeCache::scavenge_root_nmethods_do(code_roots);
+    }
+    if (so & SO_AllCodeCache) {
+      assert(code_roots != NULL, "must supply closure for code cache");
+
+      // CMSCollector uses this to do intermediate-strength collections.
+      // We scan the entire code cache, since CodeCache::do_unloading is not called.
+      CodeCache::blobs_do(code_roots);
+    }
+    par_scan_state->trim_queues(GCDrainStackTargetSize);
+    // Verify that the code cache contents are not subject to
+    // movement by a scavenging collection.
+    DEBUG_ONLY(CodeBlobToOopClosure assert_code_is_non_scavengable(&assert_is_non_scavengable_closure, !CodeBlobToOopClosure::FixRelocations));
+    DEBUG_ONLY(CodeCache::asserted_non_scavengable_nmethods_do(&assert_code_is_non_scavengable));
+  }
+}

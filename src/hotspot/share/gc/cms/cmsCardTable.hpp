@@ -63,6 +63,18 @@ private:
                       uintptr_t lowest_non_clean_base_chunk_index,
                       size_t lowest_non_clean_chunk_size);
 
+  // Apply cl, which must either itself apply dcto_cl or be dcto_cl,
+  // to the cards in the stride (of n_strides) within the given space.
+  void process_stride(Space* sp,
+                      MemRegion used,
+                      jint stride, int n_strides,
+                      OopsInGenClosure* cl,
+                      CardTableRS* ct,
+                      jbyte** lowest_non_clean,
+                      uintptr_t lowest_non_clean_base_chunk_index,
+                      size_t lowest_non_clean_chunk_size,
+                      ParScanThreadState * pts);
+
   // Makes sure that chunk boundaries are handled appropriately, by
   // adjusting the min_done of dcto_cl, and by using a special card-table
   // value to indicate how min_done should be set.
@@ -82,6 +94,9 @@ protected:
   virtual void non_clean_card_iterate_parallel_work(Space* sp, MemRegion mr,
                                                     OopsInGenClosure* cl, CardTableRS* ct,
                                                     uint n_threads);
+  virtual void non_clean_card_iterate_parallel_work(Space* sp, MemRegion mr,
+                                                    OopsInGenClosure* cl, CardTableRS* ct,
+                                                    uint n_threads, ParScanThreadState* pts);
 
 public:
   CMSCardTable(MemRegion whole_heap);

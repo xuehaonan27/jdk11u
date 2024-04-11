@@ -99,6 +99,53 @@ non_clean_card_iterate_parallel_work(Space* sp, MemRegion mr,
   }
 }
 
+void CMSCardTable::
+non_clean_card_iterate_parallel_work(Space* sp, MemRegion mr,
+                                     OopsInGenClosure* cl,
+                                     CardTableRS* ct,
+                                     uint n_threads,
+                                     ParScanThreadState* pts) {
+  assert(n_threads > 0, "expected n_threads > 0");
+  assert(n_threads <= ParallelGCThreads,
+         "n_threads: %u > ParallelGCThreads: %u", n_threads, ParallelGCThreads);
+
+  // Make sure the LNC array is valid for the space.
+  jbyte**   lowest_non_clean;
+  uintptr_t lowest_non_clean_base_chunk_index;
+  size_t    lowest_non_clean_chunk_size;
+  get_LNC_array_for_space(sp, lowest_non_clean,
+                          lowest_non_clean_base_chunk_index,
+                          lowest_non_clean_chunk_size);
+
+  uint n_strides = n_threads * ParGCStridesPerThread;
+  SequentialSubTasksDone* pst = sp->par_seq_tasks();
+  // Sets the condition for completion of the subtask (how many threads
+  // need to finish in order to be done).
+  pst->set_n_threads(n_threads);
+  pst->set_n_tasks(n_strides);
+
+  uint stride = 0;
+  while (!pst->is_task_claimed(/* reference */ stride)) {
+    process_stride(sp, mr, stride, n_strides,
+                   cl, ct,
+                   lowest_non_clean,
+                   lowest_non_clean_base_chunk_index,
+                   lowest_non_clean_chunk_size,
+                   pts);
+  }
+  if (pst->all_tasks_completed()) {
+    // Clear lowest_non_clean array for next time.
+    intptr_t first_chunk_index = addr_to_chunk_index(mr.start());
+    uintptr_t last_chunk_index  = addr_to_chunk_index(mr.last());
+    for (uintptr_t ch = first_chunk_index; ch <= last_chunk_index; ch++) {
+      intptr_t ind = ch - lowest_non_clean_base_chunk_index;
+      assert(0 <= ind && ind < (intptr_t)lowest_non_clean_chunk_size,
+             "Bounds error");
+      lowest_non_clean[ind] = NULL;
+    }
+  }
+}
+
 void
 CMSCardTable::
 process_stride(Space* sp,
@@ -109,6 +156,88 @@ process_stride(Space* sp,
                jbyte** lowest_non_clean,
                uintptr_t lowest_non_clean_base_chunk_index,
                size_t    lowest_non_clean_chunk_size) {
+  // We go from higher to lower addresses here; it wouldn't help that much
+  // because of the strided parallelism pattern used here.
+
+  // Find the first card address of the first chunk in the stride that is
+  // at least "bottom" of the used region.
+  jbyte*    start_card  = byte_for(used.start());
+  jbyte*    end_card    = byte_after(used.last());
+  uintptr_t start_chunk = addr_to_chunk_index(used.start());
+  uintptr_t start_chunk_stride_num = start_chunk % n_strides;
+  jbyte* chunk_card_start;
+
+  if ((uintptr_t)stride >= start_chunk_stride_num) {
+  chunk_card_start = (jbyte*)(start_card +
+                              (stride - start_chunk_stride_num) *
+                              ParGCCardsPerStrideChunk);
+  } else {
+  // Go ahead to the next chunk group boundary, then to the requested stride.
+  chunk_card_start = (jbyte*)(start_card +
+                              (n_strides - start_chunk_stride_num + stride) *
+                              ParGCCardsPerStrideChunk);
+  }
+
+  while (chunk_card_start < end_card) {
+  // Even though we go from lower to higher addresses below, the
+  // strided parallelism can interleave the actual processing of the
+  // dirty pages in various ways. For a specific chunk within this
+  // stride, we take care to avoid double scanning or missing a card
+  // by suitably initializing the "min_done" field in process_chunk_boundaries()
+  // below, together with the dirty region extension accomplished in
+  // DirtyCardToOopClosure::do_MemRegion().
+  jbyte*    chunk_card_end = chunk_card_start + ParGCCardsPerStrideChunk;
+  // Invariant: chunk_mr should be fully contained within the "used" region.
+  MemRegion chunk_mr       = MemRegion(addr_for(chunk_card_start),
+                                       chunk_card_end >= end_card ?
+                                       used.end() : addr_for(chunk_card_end));
+  assert(chunk_mr.word_size() > 0, "[chunk_card_start > used_end)");
+  assert(used.contains(chunk_mr), "chunk_mr should be subset of used");
+
+  // This function is used by the parallel card table iteration.
+  const bool parallel = true;
+
+  DirtyCardToOopClosure* dcto_cl = sp->new_dcto_cl(cl, precision(),
+                                                   cl->gen_boundary(),
+                                                   parallel);
+  ClearNoncleanCardWrapper clear_cl(dcto_cl, ct, parallel);
+
+
+  // Process the chunk.
+  process_chunk_boundaries(sp,
+          dcto_cl,
+          chunk_mr,
+          used,
+          lowest_non_clean,
+          lowest_non_clean_base_chunk_index,
+          lowest_non_clean_chunk_size);
+
+  // We want the LNC array updates above in process_chunk_boundaries
+  // to be visible before any of the card table value changes as a
+  // result of the dirty card iteration below.
+  OrderAccess::storestore();
+
+  // We want to clear the cards: clear_cl here does the work of finding
+  // contiguous dirty ranges of cards to process and clear.
+  clear_cl.do_MemRegion(chunk_mr);
+
+  // Find the next chunk of the stride.
+  chunk_card_start += ParGCCardsPerStrideChunk * n_strides;
+  }
+}
+
+
+void
+CMSCardTable::
+process_stride(Space* sp,
+               MemRegion used,
+               jint stride, int n_strides,
+               OopsInGenClosure* cl,
+               CardTableRS* ct,
+               jbyte** lowest_non_clean,
+               uintptr_t lowest_non_clean_base_chunk_index,
+               size_t    lowest_non_clean_chunk_size,
+               ParScanThreadState* pts) {
   // We go from higher to lower addresses here; it wouldn't help that much
   // because of the strided parallelism pattern used here.
 
@@ -172,11 +301,12 @@ process_stride(Space* sp,
 
     // We want to clear the cards: clear_cl here does the work of finding
     // contiguous dirty ranges of cards to process and clear.
-    clear_cl.do_MemRegion(chunk_mr);
+    clear_cl.do_MemRegion(chunk_mr, pts);
 
     // Find the next chunk of the stride.
     chunk_card_start += ParGCCardsPerStrideChunk * n_strides;
   }
+  pts->trim_queues(GCDrainStackTargetSize);
 }
 
 void

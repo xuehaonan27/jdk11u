@@ -38,6 +38,7 @@
 #include "gc/shared/gcId.hpp"
 #include "gc/shared/gcLocker.inline.hpp"
 #include "gc/shared/workgroup.hpp"
+#include "gc/cms/parNewGeneration.hpp"
 #include "interpreter/interpreter.hpp"
 #include "interpreter/linkResolver.hpp"
 #include "interpreter/oopMapCache.hpp"
@@ -3577,6 +3578,21 @@ void Threads::possibly_parallel_threads_do(bool is_par, ThreadClosure* tc) {
   }
 }
 
+void Threads::possibly_parallel_threads_do(bool is_par, ThreadClosure* tc, ParScanThreadState* par_scan_state) {
+  int cp = Threads::thread_claim_parity();
+  ALL_JAVA_THREADS(p) {
+    if (p->claim_oops_do(is_par, cp)) {
+      tc->do_thread(p);
+      par_scan_state->trim_queues(GCDrainStackTargetSize);
+    }
+  }
+  VMThread* vmt = VMThread::vm_thread();
+  if (vmt->claim_oops_do(is_par, cp)) {
+    tc->do_thread(vmt);
+    par_scan_state->trim_queues(GCDrainStackTargetSize);
+  }
+}
+
 // The system initialization in the library has three phases.
 //
 // Phase 1: java.lang.System class initialization
@@ -4589,6 +4605,11 @@ public:
 void Threads::possibly_parallel_oops_do(bool is_par, OopClosure* f, CodeBlobClosure* cf) {
   ParallelOopsDoThreadClosure tc(f, cf);
   possibly_parallel_threads_do(is_par, &tc);
+}
+
+void Threads::possibly_parallel_oops_do(bool is_par, OopClosure* f, CodeBlobClosure* cf, ParScanThreadState* par_scan_state) {
+  ParallelOopsDoThreadClosure tc(f, cf);
+  possibly_parallel_threads_do(is_par, &tc, par_scan_state);
 }
 
 void Threads::nmethods_do(CodeBlobClosure* cf) {

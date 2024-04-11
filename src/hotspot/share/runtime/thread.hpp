@@ -86,6 +86,8 @@ class GCTaskQueue;
 class ThreadClosure;
 class IdealGraphPrinter;
 
+class ParScanThreadState;
+
 class Metadata;
 template <class T, MEMFLAGS F> class ChunkedList;
 typedef ChunkedList<Metadata*, mtInternal> MetadataOnStackBuffer;
@@ -2198,6 +2200,7 @@ class Threads: AllStatic {
   static void java_threads_and_vm_thread_do(ThreadClosure* tc);
   static void threads_do(ThreadClosure* tc);
   static void possibly_parallel_threads_do(bool is_par, ThreadClosure* tc);
+  static void possibly_parallel_threads_do(bool is_par, ThreadClosure* tc, ParScanThreadState* par_scan_state);
 
   // Initializes the vm and creates the vm thread
   static jint create_vm(JavaVMInitArgs* args, bool* canTryAgain);
@@ -2234,6 +2237,7 @@ class Threads: AllStatic {
   static void oops_do(OopClosure* f, CodeBlobClosure* cf);
   // This version may be called by sequential or parallel code.
   static void possibly_parallel_oops_do(bool is_par, OopClosure* f, CodeBlobClosure* cf);
+  static void possibly_parallel_oops_do(bool is_par, OopClosure* f, CodeBlobClosure* cf, ParScanThreadState* par_scan_state);
 
   // Apply "f->do_oop" to roots in all threads that
   // are part of compiled frames

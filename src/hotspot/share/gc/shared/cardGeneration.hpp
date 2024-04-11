@@ -33,6 +33,7 @@
 class BlockOffsetSharedArray;
 class CardTableRS;
 class CompactibleSpace;
+class ParScanThreadState;
 
 class CardGeneration: public Generation {
   friend class VMStructs;
@@ -92,6 +93,7 @@ class CardGeneration: public Generation {
   void space_iterate(SpaceClosure* blk, bool usedOnly = false);
 
   void younger_refs_iterate(OopsInGenClosure* blk, uint n_threads);
+  void younger_refs_iterate(OopsInGenClosure* blk, uint n_threads, ParScanThreadState *pts);
 
   bool is_in(const void* p) const;
 

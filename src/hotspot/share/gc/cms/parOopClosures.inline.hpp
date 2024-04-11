@@ -122,12 +122,12 @@ inline void ParScanClosure::do_oop_work(T* p,
         size_t obj_sz = obj->size_given_klass(objK);
         new_obj = _g->copy_to_survivor_space(_par_scan_state, obj, obj_sz, m);
         RawAccess<IS_NOT_NULL>::oop_store(p, new_obj);
-        if (root_scan) {
-          // This may have pushed an object.  If we have a root
-          // category with a lot of roots, can't let the queue get too
-          // full:
-          (void)_par_scan_state->trim_queues(10 * ParallelGCThreads);
-        }
+//        if (root_scan) {
+//          // This may have pushed an object.  If we have a root
+//          // category with a lot of roots, can't let the queue get too
+//          // full:
+//          (void)_par_scan_state->trim_queues(10 * ParallelGCThreads);
+//        }
       }
       if (is_scanning_a_cld()) {
         do_cld_barrier();

@@ -165,9 +165,34 @@ void ParScanThreadState::scan_partial_array_and_push_remainder(oop old) {
   }
 }
 
+void ParScanThreadState::trim_queues_cond(){
+  if(queue->size() > (juint)max_size > GCDrainStackTargetSize){
+    trim_queues(GCDrainStackTargetSize);
+  }
+}
+
 void ParScanThreadState::trim_queues(int max_size) {
   ObjToScanQueue* queue = work_queue();
+  Stack<oop, mtGC>* const of_stack = overflow_stack();
+
   do {
+    while(!of_stack->is_empty()){
+      oop obj_to_scan = of_stack->pop();
+      if ((HeapWord *)obj_to_scan < young_old_boundary()) {
+        if (obj_to_scan->is_objArray() &&
+            obj_to_scan->is_forwarded() &&
+            obj_to_scan->forwardee() != obj_to_scan) {
+          scan_partial_array_and_push_remainder(obj_to_scan);
+        } else {
+          // object is in to_space
+          obj_to_scan->oop_iterate(&_to_space_closure);
+        }
+      } else {
+        // object is in old generation
+        obj_to_scan->oop_iterate(&_old_gen_closure);
+      }
+    }
+
     while (queue->size() > (juint)max_size) {
       oop obj_to_scan;
       if (queue->pop_local(obj_to_scan)) {
@@ -193,7 +218,7 @@ void ParScanThreadState::trim_queues(int max_size) {
     // If applicable, we'll transfer a set of objects over to our
     // work queue, allowing them to be stolen and draining our
     // private overflow stack.
-  } while (ParGCTrimOverflow && young_gen()->take_from_overflow_list(this));
+  } while (!of_stack->is_empty());
 }
 
 bool ParScanThreadState::take_from_overflow_stack() {
@@ -607,7 +632,8 @@ void ParNewGenTask::work(uint worker_id) {
                            &par_scan_state.to_space_root_closure(),
                            &par_scan_state.older_gen_closure(),
                            &cld_scan_closure,
-                           &_par_state_string);
+                           &_par_state_string,
+                            *par_scan_state);
 
   par_scan_state.end_strong_roots();
 

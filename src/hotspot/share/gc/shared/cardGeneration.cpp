@@ -32,6 +32,7 @@
 #include "gc/shared/genOopClosures.inline.hpp"
 #include "gc/shared/generationSpec.hpp"
 #include "gc/shared/space.inline.hpp"
+#include "gc/cms/parNewGeneration.hpp"
 #include "memory/iterator.hpp"
 #include "memory/memRegion.hpp"
 #include "logging/log.hpp"
@@ -313,5 +314,11 @@ void CardGeneration::space_iterate(SpaceClosure* blk,
 void CardGeneration::younger_refs_iterate(OopsInGenClosure* blk, uint n_threads) {
   blk->set_generation(this);
   younger_refs_in_space_iterate(space(), blk, n_threads);
+  blk->reset_generation();
+}
+
+void CardGeneration::younger_refs_iterate(OopsInGenClosure* blk, uint n_threads, ParScanThreadState* pts) {
+  blk->set_generation(this);
+  younger_refs_in_space_iterate(space(), blk, n_threads, pts);
   blk->reset_generation();
 }

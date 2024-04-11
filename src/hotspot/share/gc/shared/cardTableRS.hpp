@@ -33,6 +33,7 @@ class DirtyCardToOopClosure;
 class Generation;
 class Space;
 class OopsInGenClosure;
+class ParScanThreadState;
 
 // Helper to remember modified oops in all clds.
 class CLDRemSet {
@@ -105,6 +106,7 @@ public:
   CLDRemSet* cld_rem_set() { return &_cld_rem_set; }
 
   void younger_refs_in_space_iterate(Space* sp, OopsInGenClosure* cl, uint n_threads);
+  void younger_refs_in_space_iterate(Space* sp, OopsInGenClosure* cl, uint n_threads, ParScanThreadState * pts);
 
   virtual void verify_used_region_at_save_marks(Space* sp) const NOT_DEBUG_RETURN;
 
@@ -115,6 +117,8 @@ public:
   // responsible for dirtying if the oop is still older-to-younger after
   // closure application.
   void younger_refs_iterate(Generation* g, OopsInGenClosure* blk, uint n_threads);
+
+  void younger_refs_iterate(Generation* g, OopsInGenClosure* blk, uint n_threads, ParScanThreadState* pts);
 
   void inline_write_ref_field_gc(void* field, oop new_val) {
     jbyte* byte = byte_for(field);
@@ -174,11 +178,24 @@ public:
                                                 OopsInGenClosure* cl, CardTableRS* ct,
                                                 uint n_threads);
 
+  // Iterate over the portion of the card-table which covers the given
+  // region mr in the given space and apply cl to any dirty sub-regions
+  // of mr. Clears the dirty cards as they are processed.
+  void non_clean_card_iterate_possibly_parallel(Space* sp, MemRegion mr,
+                                                OopsInGenClosure* cl, CardTableRS* ct,
+                                                uint n_threads, ParScanThreadState* pts);
+
   // Work method used to implement non_clean_card_iterate_possibly_parallel()
   // above in the parallel case.
   virtual void non_clean_card_iterate_parallel_work(Space* sp, MemRegion mr,
                                                     OopsInGenClosure* cl, CardTableRS* ct,
                                                     uint n_threads);
+
+  // Work method used to implement non_clean_card_iterate_possibly_parallel()
+  // above in the parallel case.
+  virtual void non_clean_card_iterate_parallel_work(Space* sp, MemRegion mr,
+                                                    OopsInGenClosure* cl, CardTableRS* ct,
+                                                    uint n_threads, ParScanThreadState* pts);
 
   // This is an array, one element per covered region of the card table.
   // Each entry is itself an array, with one element per chunk in the
@@ -212,6 +229,7 @@ private:
 public:
   ClearNoncleanCardWrapper(DirtyCardToOopClosure* dirty_card_closure, CardTableRS* ct, bool is_par);
   void do_MemRegion(MemRegion mr);
+  void do_MemRegion(MemRegion mr, ParScanThreadState* pts);
 };
 
 #endif // SHARE_VM_GC_SHARED_CARDTABLERS_HPP

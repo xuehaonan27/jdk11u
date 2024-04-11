@@ -130,6 +130,21 @@ public:
     }
     
   }
+
+  void young_process_roots(StrongRootsScope* scope,
+                                    OopsInGenClosure* root_closure,
+                                    OopsInGenClosure* old_gen_closure,
+                                    CLDClosure* cld_closure,
+                                    OopStorage::ParState<false, false>* par_state_string,
+                                    ParScanThreadState* par_scan_state);
+
+  void process_roots(StrongRootsScope* scope,
+                              ScanningOption so,
+                              OopClosure* strong_roots,
+                              CLDClosure* strong_cld_closure,
+                              CLDClosure* weak_cld_closure,
+                              CodeBlobToOopClosure* code_roots,
+                              ParScanThreadState* par_scan_state);
                                     
 
 
