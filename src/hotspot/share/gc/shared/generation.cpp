@@ -279,6 +279,14 @@ void Generation::younger_refs_in_space_iterate(Space* sp,
   rs->younger_refs_in_space_iterate(sp, cl, n_threads);
 }
 
+void Generation::younger_refs_in_space_iterate(Space* sp,
+                                               OopsInGenClosure* cl,
+                                               uint n_threads,
+                                               ParScanThreadState *pts) {
+  CardTableRS* rs = GenCollectedHeap::heap()->rem_set();
+  rs->younger_refs_in_space_iterate(sp, cl, n_threads, pts);
+}
+
 class GenerationObjIterateClosure : public SpaceClosure {
  private:
   ObjectClosure* _cl;

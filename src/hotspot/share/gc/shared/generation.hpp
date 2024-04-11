@@ -119,6 +119,7 @@ class Generation: public CHeapObj<mtGC> {
   // iterations; objects allocated as a result of applying the closure are
   // not included.
   void younger_refs_in_space_iterate(Space* sp, OopsInGenClosure* cl, uint n_threads);
+  void younger_refs_in_space_iterate(Space* sp, OopsInGenClosure* cl, uint n_threads, ParScanThreadState * pts);
 
  public:
   // The set of possible generation kinds.
@@ -496,7 +497,7 @@ class Generation: public CHeapObj<mtGC> {
   // excluded.
   virtual void younger_refs_iterate(OopsInGenClosure* cl, uint n_threads) = 0;
 
-  virtual void younger_refs_iterate(OopsInGenClosure* cl, uint n_threads, ParScanThreadState *pts) = 0;
+  virtual void younger_refs_iterate_pts(OopsInGenClosure* cl, uint n_threads, ParScanThreadState *pts) {}
 
   // Inform a generation that it longer contains references to objects
   // in any younger generation.    [e.g. Because younger gens are empty,

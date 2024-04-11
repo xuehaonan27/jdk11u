@@ -39,6 +39,8 @@
 #include "oops/oop.inline.hpp"
 #include "runtime/vmThread.hpp"
 #include "services/memoryManager.hpp"
+#include "services/management.hpp"
+#include "aot/aotLoader.hpp"
 #include "utilities/stack.inline.hpp"
 
 class CompactibleFreeListSpacePool : public CollectedMemoryPool {
@@ -244,7 +246,7 @@ void CMSHeap::cms_process_roots(StrongRootsScope* scope,
   MarkingCodeBlobClosure mark_code_closure(root_closure, !CodeBlobToOopClosure::FixRelocations);
   CLDClosure* weak_cld_closure = only_strong_roots ? NULL : cld_closure;
 
-  process_roots(scope, so, root_closure, cld_closure, weak_cld_closure, &mark_code_closure);
+  GenCollectedHeap::process_roots(scope, so, root_closure, cld_closure, weak_cld_closure, &mark_code_closure);
   if (!only_strong_roots) {
     process_string_table_roots(scope, root_closure, par_state_string);
   }
@@ -339,7 +341,9 @@ void CMSHeap::young_process_roots(StrongRootsScope* scope,
 
   process_roots(scope, SO_ScavengeCodeCache, root_closure,
                 cld_closure, cld_closure, &mark_code_closure, par_scan_state);
+                
   process_string_table_roots(scope, root_closure, par_state_string);
+  par_scan_state->trim_queues(GCDrainStackTargetSize);
 
   if (!_process_strong_tasks->is_task_claimed(GCH_PS_younger_gens)) {
     root_closure->reset_generation();

@@ -166,7 +166,8 @@ void ParScanThreadState::scan_partial_array_and_push_remainder(oop old) {
 }
 
 void ParScanThreadState::trim_queues_cond(){
-  if(queue->size() > (juint)max_size > GCDrainStackTargetSize){
+  ObjToScanQueue* queue = work_queue();
+  if(queue->size() > (juint)GCDrainStackTargetSize > GCDrainStackTargetSize){
     trim_queues(GCDrainStackTargetSize);
   }
 }
@@ -633,7 +634,7 @@ void ParNewGenTask::work(uint worker_id) {
                            &par_scan_state.older_gen_closure(),
                            &cld_scan_closure,
                            &_par_state_string,
-                            *par_scan_state);
+                            &par_scan_state);
 
   par_scan_state.end_strong_roots();
 

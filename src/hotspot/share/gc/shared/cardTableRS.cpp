@@ -129,7 +129,7 @@ void CardTableRS::younger_refs_iterate(Generation* g,
   // The indexing in this array is slightly odd. We want to access
   // the old generation record here, which is at index 2.
   _last_cur_val_in_gen[2] = cur_youngergen_card_val();
-  g->younger_refs_iterate(blk, n_threads, pts);
+  g->younger_refs_iterate_pts(blk, n_threads, pts);
 }
 
 inline bool ClearNoncleanCardWrapper::clear_card(jbyte* entry) {
@@ -813,6 +813,12 @@ void CardTableRS::non_clean_card_iterate_possibly_parallel(
 void CardTableRS::non_clean_card_iterate_parallel_work(Space* sp, MemRegion mr,
                                                        OopsInGenClosure* cl, CardTableRS* ct,
                                                        uint n_threads) {
+  fatal("Parallel gc not supported here.");
+}
+
+void CardTableRS::non_clean_card_iterate_parallel_work(Space* sp, MemRegion mr,
+                                                       OopsInGenClosure* cl, CardTableRS* ct,
+                                                       uint n_threads, ParScanThreadState *pts) {
   fatal("Parallel gc not supported here.");
 }
 

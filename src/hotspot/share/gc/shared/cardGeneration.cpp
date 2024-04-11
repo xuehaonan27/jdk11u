@@ -317,7 +317,7 @@ void CardGeneration::younger_refs_iterate(OopsInGenClosure* blk, uint n_threads)
   blk->reset_generation();
 }
 
-void CardGeneration::younger_refs_iterate(OopsInGenClosure* blk, uint n_threads, ParScanThreadState* pts) {
+void CardGeneration::younger_refs_iterate_pts(OopsInGenClosure* blk, uint n_threads, ParScanThreadState* pts) {
   blk->set_generation(this);
   younger_refs_in_space_iterate(space(), blk, n_threads, pts);
   blk->reset_generation();
