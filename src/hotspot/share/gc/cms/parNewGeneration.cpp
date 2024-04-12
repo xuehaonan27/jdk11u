@@ -172,13 +172,55 @@ void ParScanThreadState::trim_queues_cond(){
   }
 }
 
+void ParScanThreadState::t_old_work(oop o){
+  o->oop_iterate(&_old_gen_closure);
+}
+
+void ParScanThreadState::t_young_work(oop o){
+  o->oop_iterate(&_to_space_closure);
+}
+
+void ParScanThreadState::t_partial_work(oop o){
+  scan_partial_array_and_push_remainder(o);
+}
+
 void ParScanThreadState::trim_queues(int max_size) {
   ObjToScanQueue* queue = work_queue();
   Stack<oop, mtGC>* const of_stack = overflow_stack();
 
   do {
+
+    // while(!of_stack->is_empty() && queue->size() < queue->max_elems()){
     while(!of_stack->is_empty()){
-      oop obj_to_scan = of_stack->pop();
+      oop cur = of_stack->pop();
+      oop obj_to_scan = cur->forwardee();
+      if(!CMSHeap::heap()->is_in_reserved(cur)){
+        log_info(gc)("Should be in heap");
+        ShouldNotReachHere();
+      }
+      if(old_gen()->is_in_reserved(cur)){
+        log_info(gc)("Should be in young gen");
+        ShouldNotReachHere();
+      }
+      if(!CMSHeap::heap()->is_in_reserved(obj_to_scan)){
+        log_info(gc)("Should be in heap push");
+        ShouldNotReachHere();
+      }
+
+      if (should_be_partially_scanned(obj_to_scan, cur)) {
+        if(!arrayOop(cur)->length() == 0){
+          log_info(gc)("Should be zero array");
+          ShouldNotReachHere();
+        }
+        obj_to_scan = cur;
+      }
+      
+      // bool ok = queue->push(obj_to_scan);
+      // if(!ok){
+      //   log_info(gc)("%u %u", queue->size(), (juint)max_size);
+      //   ShouldNotReachHere();
+      // }
+
       if ((HeapWord *)obj_to_scan < young_old_boundary()) {
         if (obj_to_scan->is_objArray() &&
             obj_to_scan->is_forwarded() &&

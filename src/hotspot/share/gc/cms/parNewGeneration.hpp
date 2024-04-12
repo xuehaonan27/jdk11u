@@ -155,6 +155,9 @@ class ParScanThreadState {
   ParRootScanWithoutBarrierClosure& to_space_root_closure() { return _to_space_root_closure; };
 
   // Decrease queue size below "max_size".
+  void t_old_work(oop o);
+  void t_young_work(oop o);
+  void t_partial_work(oop o);
   void trim_queues(int max_size);
   void trim_queues_cond();
 

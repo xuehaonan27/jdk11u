@@ -60,6 +60,9 @@ Stack<E, F>::Stack(size_t segment_size, size_t max_cache_size, size_t max_size):
 template <class E, MEMFLAGS F>
 void Stack<E, F>::push(E item)
 {
+  if(is_full()){
+    ShouldNotReachHere();
+  }
   assert(!is_full(), "pushing onto a full stack");
   if (this->_cur_seg_size == this->_seg_size) {
     push_segment();
