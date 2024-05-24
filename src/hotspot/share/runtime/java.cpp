@@ -519,7 +519,7 @@ void before_exit(JavaThread* thread) {
 #ifdef XHN_JVM_LINUX_X86
   // Variable in MemAllocator are static
   // So just create an arbitrary MemAllocator and log the info
-  MemAllocator allocator = MemAllocator(NULL, 0, NULL);
+  ObjAllocator allocator(NULL, 0, NULL);
   allocator.log_gc_info();
 #endif
 
