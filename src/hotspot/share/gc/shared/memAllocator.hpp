@@ -80,6 +80,32 @@ public:
   }
 };
 
+class AtomicUInt128t {
+private:
+  __uint128_t inner;
+public:
+  AtomicUInt128t() : inner(0) {}
+  AtomicUInt128t(__uint128_t inner): inner(inner) {}
+  inline void add(__uint128_t rhs) {
+    Atomic::add<__uint128_t, __uint128_t>(rhs, &inner);
+  }
+  inline void sub(__uint128_t rhs) {
+    Atomic::sub<__uint128_t, __uint128_t>(rhs, &inner);
+  }
+  inline void inc() {
+    Atomic::inc<__uint128_t>(&inner);
+  }
+  inline void dec() {
+    Atomic::dec<__uint128_t>(&inner);
+  }
+  inline void inspect() const {
+    return Atomic::load<__uint128_t>(&inner);
+  }
+  inline void clear() {
+    Atomic::store<__uint128_t>(0, &inner);
+  }
+};
+
 // These fascilities are used for allocating, and initializing newly allocated objects.
 
 class MemAllocator: StackObj {
@@ -103,6 +129,8 @@ protected:
   static AtomicJLong   _tot_time_goes_allocate_inside_tlab_slow;
   // Tlab allocation slow path failed, allocate from heap
   static AtomicJLong   _tot_time_goes_allocate_outside_tlab;
+  
+  static AtomicUInt128t test;
 
 public:
   inline size_t inspect_cnt_allocate_inside_tlab_direct() const {
