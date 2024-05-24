@@ -157,6 +157,16 @@ public:
     return this->_tot_time_goes_allocate_outside_tlab.inspect();
   }
 
+  void log_gc_info() const {
+    log_info(gc)("[MemAllocator State]\nCounter: dir(%lu), slow(%lu), heap(%lu)\nTimer: dir(%lu), slow(%lu), heap(%lu)\n",
+    inspect_cnt_allocate_inside_tlab_direct(),
+    inspect_cnt_allocate_inside_tlab_slow(),
+    inspect_cnt_allocate_from_heap(),
+    inspect_tot_time_goes_allocate_inside_tlab_direct_try(),
+    inspect_tot_time_goes_allocate_inside_tlab_slow(),
+    inspect_tot_time_goes_allocate_outside_tlab());
+  }
+
 private:
   // Allocate from the current thread's TLAB, with broken-out slow path.
   HeapWord* allocate_inside_tlab(Allocation& allocation) const;
@@ -170,13 +180,6 @@ protected:
       _thread(thread),
       _klass(klass),
       _word_size(word_size)
-      // ,
-      // _cnt_allocate_inside_tlab_direct(AtomicSizet()),
-      // _cnt_allocate_inside_tlab_slow(AtomicSizet()),
-      // _cnt_allocate_from_heap(AtomicSizet()),
-      // _tot_time_goes_allocate_inside_tlab_direct_try(AtomicJLong()),
-      // _tot_time_goes_allocate_inside_tlab_slow(AtomicJLong()),
-      // _tot_time_goes_allocate_outside_tlab(AtomicJLong())
   { }
 
   // This function clears the memory of the object

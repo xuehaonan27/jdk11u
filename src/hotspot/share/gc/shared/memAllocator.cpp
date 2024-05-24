@@ -527,14 +527,6 @@ HeapWord* MemAllocator::mem_allocate(Allocation& allocation) const {
     // Path 1: Fast path.
     HeapWord* result = allocate_inside_tlab(allocation);
     if (result != NULL) {
-      // Log info.
-      log_info(gc)("[MemAllocator State]\nCounter: dir(%lu), slow(%lu), heap(%lu)\nTimer: dir(%lu), slow(%lu), heap(%lu)\n",
-        inspect_cnt_allocate_inside_tlab_direct(),
-        inspect_cnt_allocate_inside_tlab_slow(),
-        inspect_cnt_allocate_from_heap(),
-        inspect_tot_time_goes_allocate_inside_tlab_direct_try(),
-        inspect_tot_time_goes_allocate_inside_tlab_slow(),
-        inspect_tot_time_goes_allocate_outside_tlab());
       return result;
     }
   }
@@ -550,15 +542,6 @@ HeapWord* MemAllocator::mem_allocate(Allocation& allocation) const {
   jlong end_heap = rdtsc();
   _tot_time_goes_allocate_outside_tlab.add(end_heap - start_heap);
   #endif
-
-  // Log info.
-  log_info(gc)("[MemAllocator State]\nCounter: dir(%lu), slow(%lu), heap(%lu)\nTimer: dir(%lu), slow(%lu), heap(%lu)\n",
-    inspect_cnt_allocate_inside_tlab_direct(),
-    inspect_cnt_allocate_inside_tlab_slow(),
-    inspect_cnt_allocate_from_heap(),
-    inspect_tot_time_goes_allocate_inside_tlab_direct_try(),
-    inspect_tot_time_goes_allocate_inside_tlab_slow(),
-    inspect_tot_time_goes_allocate_outside_tlab());
 
   return heap_addr;
   // return allocate_outside_tlab(allocation);

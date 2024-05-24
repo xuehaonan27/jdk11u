@@ -89,6 +89,11 @@
 #include "jfr/jfr.hpp"
 #endif
 
+#define XHN_JVM_LINUX_X86
+#ifdef XHN_JVM_LINUX_X86
+#include "gc/shared/memAllocator.hpp"
+#endif
+
 GrowableArray<Method*>* collected_profiled_methods;
 
 int compare_methods(Method** a, Method** b) {
@@ -510,6 +515,13 @@ void before_exit(JavaThread* thread) {
 
   // Stop concurrent GC threads
   Universe::heap()->stop();
+
+#ifdef XHN_JVM_LINUX_X86
+  // Variable in MemAllocator are static
+  // So just create an arbitrary MemAllocator and log the info
+  MemAllocator allocator = MemAllocator(NULL, 0, NULL);
+  allocator.log_gc_info();
+#endif
 
   log_info(gc)("Majflt(exit jvm)=%ld", os::accumMajflt());
 
