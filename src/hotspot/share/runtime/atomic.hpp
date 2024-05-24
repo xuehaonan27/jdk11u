@@ -47,7 +47,7 @@ enum atomic_memory_order {
   // Strong two-way memory barrier.
   memory_order_conservative = 8
 };
-
+// 原子语义
 class Atomic : AllStatic {
 public:
   // Atomic operations on int64 types are not available on all 32-bit

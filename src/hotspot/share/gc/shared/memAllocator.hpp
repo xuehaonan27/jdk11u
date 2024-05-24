@@ -30,6 +30,55 @@
 #include "oops/oopsHierarchy.hpp"
 #include "utilities/exceptions.hpp"
 #include "utilities/macros.hpp"
+#include "runtime/atomic.hpp"
+
+// A new type to constraint the behavior of counters.
+// Using inlines to reduce the cost of function calling.
+class AtomicSizet {
+private:
+  size_t inner;
+public:
+  AtomicSizet(): inner(0) {}
+  AtomicSizet(size_t inner): inner(inner) {}
+  inline void add(size_t rhs) {
+    Atomic::add<size_t, size_t>(rhs, &inner);
+  }
+  inline void sub(size_t rhs) {
+    Atomic::sub<size_t, size_t>(rhs, &inner);
+  }
+  inline void inc() {
+    Atomic::inc<size_t>(&inner);
+  }
+  inline void dec() {
+    Atomic::dec<size_t>(&inner);
+  }
+  inline size_t inspect() const {
+    return Atomic::load<size_t>(&inner);
+  }
+  inline void clear() {
+    Atomic::store<size_t, size_t>(size_t(0), &inner);
+  }
+};
+
+class AtomicJLong {
+private:
+  jlong inner;
+public:
+  AtomicJLong(): inner(0) {}
+  AtomicJLong(jlong inner): inner(inner) {}
+  inline void add(jlong rhs) {
+    Atomic::add<jlong, jlong>(rhs, &inner);
+  }
+  inline void sub(jlong rhs) {
+    Atomic::sub<jlong, jlong>(rhs, &inner);
+  }
+  inline jlong inspect() const {
+    return Atomic::load<jlong>(&inner);
+  }
+  inline void clear() {
+    Atomic::store<jlong, jlong>(jlong(0), &inner);
+  }
+};
 
 // These fascilities are used for allocating, and initializing newly allocated objects.
 
@@ -41,6 +90,44 @@ protected:
   Thread* const        _thread;
   Klass* const         _klass;
   const size_t         _word_size;
+
+  // Counters of allocations happened
+  static AtomicSizet   _cnt_allocate_inside_tlab_direct;
+  static AtomicSizet   _cnt_allocate_inside_tlab_slow;
+  static AtomicSizet   _cnt_allocate_from_heap;
+
+  // Timers of allocations happened
+  // Try to tlab allocation
+  static AtomicJLong   _tot_time_goes_allocate_inside_tlab_direct_try;
+  // Tlab allocation fail, slow path
+  static AtomicJLong   _tot_time_goes_allocate_inside_tlab_slow;
+  // Tlab allocation slow path failed, allocate from heap
+  static AtomicJLong   _tot_time_goes_allocate_outside_tlab;
+
+public:
+  inline size_t inspect_cnt_allocate_inside_tlab_direct() const {
+    return this->_cnt_allocate_inside_tlab_direct.inspect();
+  }
+
+  inline size_t inspect_cnt_allocate_inside_tlab_slow() const {
+    return this->_cnt_allocate_inside_tlab_slow.inspect();
+  }
+
+  inline size_t inspect_cnt_allocate_from_heap() const {
+    return this->_cnt_allocate_from_heap.inspect();
+  }
+
+  inline jlong inspect_tot_time_goes_allocate_inside_tlab_direct_try() const {
+    return this->_tot_time_goes_allocate_inside_tlab_direct_try.inspect();
+  }
+
+  inline jlong inspect_tot_time_goes_allocate_inside_tlab_slow() const {
+    return this->_tot_time_goes_allocate_inside_tlab_slow.inspect();
+  }
+
+  inline jlong inspect_tot_time_goes_allocate_outside_tlab() const {
+    return this->_tot_time_goes_allocate_outside_tlab.inspect();
+  }
 
 private:
   // Allocate from the current thread's TLAB, with broken-out slow path.
@@ -55,6 +142,13 @@ protected:
       _thread(thread),
       _klass(klass),
       _word_size(word_size)
+      // ,
+      // _cnt_allocate_inside_tlab_direct(AtomicSizet()),
+      // _cnt_allocate_inside_tlab_slow(AtomicSizet()),
+      // _cnt_allocate_from_heap(AtomicSizet()),
+      // _tot_time_goes_allocate_inside_tlab_direct_try(AtomicJLong()),
+      // _tot_time_goes_allocate_inside_tlab_slow(AtomicJLong()),
+      // _tot_time_goes_allocate_outside_tlab(AtomicJLong())
   { }
 
   // This function clears the memory of the object

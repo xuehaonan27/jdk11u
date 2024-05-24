@@ -41,6 +41,34 @@
 #include "utilities/align.hpp"
 #include "utilities/copy.hpp"
 
+#define XHN_JVM_LINUX_X86
+
+#ifdef XHN_JVM_LINUX_X86
+// Using linux x86 os::rdtsc
+// #include "linux_x86/os_linux_x86.inline.hpp"
+inline jlong rdtsc() {
+#ifndef AMD64
+  // 64 bit result in edx:eax
+  uint64_t res;
+  __asm__ __volatile__ ("rdtsc" : "=A" (res));
+  return (jlong)res;
+#else
+  uint64_t res;
+  uint32_t ts1, ts2;
+  __asm__ __volatile__ ("rdtsc" : "=a" (ts1), "=d" (ts2));
+  res = ((uint64_t)ts1 | (uint64_t)ts2 << 32);
+  return (jlong)res;
+#endif // AMD64
+}
+#endif
+
+AtomicSizet MemAllocator::_cnt_allocate_inside_tlab_direct = AtomicSizet();
+AtomicSizet MemAllocator::_cnt_allocate_inside_tlab_slow = AtomicSizet();
+AtomicSizet MemAllocator::_cnt_allocate_from_heap = AtomicSizet();
+AtomicJLong MemAllocator::_tot_time_goes_allocate_inside_tlab_direct_try = AtomicJLong();
+AtomicJLong MemAllocator::_tot_time_goes_allocate_inside_tlab_slow = AtomicJLong();
+AtomicJLong MemAllocator::_tot_time_goes_allocate_outside_tlab = AtomicJLong();
+
 class MemAllocator::Allocation: StackObj {
   friend class MemAllocator;
 
@@ -288,17 +316,73 @@ HeapWord* MemAllocator::allocate_inside_tlab(Allocation& allocation) const {
 
   // Try allocating from an existing TLAB.
 //  log_info(gc)("tlab allocation, required size: %lu", _word_size);
+      
+  #ifdef XHN_JVM_LINUX_X86
+  // Begin calculate the time
+  // jlong is aliased to __int64
+  jlong start_direct_try = rdtsc();
+  #endif
+
   HeapWord* mem = _thread->tlab().allocate(_word_size);
+
+  #ifdef XHN_JVM_LINUX_X86
+  jlong end_direct_try = rdtsc();
+  // Whether succeeded or not, we should calculate the time it consumed
+  _tot_time_goes_allocate_inside_tlab_direct_try.add(end_direct_try - start_direct_try);
+  #endif
+
   if (mem != NULL) {
+    // Path Direct succeeded. 
+    _cnt_allocate_inside_tlab_direct.inc();
+    // Log out
+    // log_info(gc)("[%d:%d:MemAllocator::mem_allocate] alloc_tlab_direct succ", __FILE__, __LINE__);
     return mem;
   }
 
   if (UseConcMarkSweepGC && UseMSOld) {
+
+    #ifdef XHN_JVM_LINUX_X86
+    jlong start_slow = rdtsc();
+    #endif
+
     // Try refilling the TLAB and allocating the object in it.
-    return allocate_inside_tlab_slow_cms(allocation);
+    HeapWord* tlab_addr = allocate_inside_tlab_slow_cms(allocation);
+
+    #ifdef XHN_JVM_LINUX_X86
+    jlong end_slow = rdtsc();
+    _tot_time_goes_allocate_inside_tlab_slow.add(end_slow - start_slow);
+    #endif
+
+    if (tlab_addr != NULL) {
+      // Path Slow succeeded. 
+      _cnt_allocate_inside_tlab_slow.inc();
+      // Log out
+      // log_info(gc)("[%d:%d:MemAllocator::mem_allocate] alloc_tlab_slow(cms) succ", __FILE__, __LINE__);
+    }
+    return tlab_addr;
+    // return allocate_inside_tlab_slow_cms(allocation);
   } else {
+
+    #ifdef XHN_JVM_LINUX_X86
+    jlong start_slow = rdtsc();
+    #endif
+
     // Try refilling the TLAB and allocating the object in it.
-    return allocate_inside_tlab_slow(allocation);
+    HeapWord* tlab_addr = allocate_inside_tlab_slow(allocation);
+
+    #ifdef XHN_JVM_LINUX_X86
+    jlong end_slow = rdtsc();
+    _tot_time_goes_allocate_inside_tlab_slow.add(end_slow - start_slow);
+    #endif
+
+    if (tlab_addr != NULL) {
+      // Path Slow succeeded.
+      _cnt_allocate_inside_tlab_slow.inc();
+      // Log out
+      // log_info(gc)("[%d:%d:MemAllocator::mem_allocate] alloc_tlab_slow succ", __FILE__, __LINE__);
+    }
+    return tlab_addr;
+    // return allocate_inside_tlab_slow(allocation);
   }
 
 }
@@ -437,16 +521,47 @@ HeapWord* MemAllocator::allocate_inside_tlab_slow(Allocation& allocation) const 
   tlab.fill(mem, mem + _word_size, allocation._allocated_tlab_size);
   return mem;
 }
-
+// 分配
 HeapWord* MemAllocator::mem_allocate(Allocation& allocation) const {
   if (UseTLAB) {
+    // Path 1: Fast path.
     HeapWord* result = allocate_inside_tlab(allocation);
     if (result != NULL) {
+      // Log info.
+      log_info(gc)("[MemAllocator State]\nCounter: dir(%lu), slow(%lu), heap(%lu)\nTimer: dir(%lu), slow(%lu), heap(%lu)\n",
+        inspect_cnt_allocate_inside_tlab_direct(),
+        inspect_cnt_allocate_inside_tlab_slow(),
+        inspect_cnt_allocate_from_heap(),
+        inspect_tot_time_goes_allocate_inside_tlab_direct_try(),
+        inspect_tot_time_goes_allocate_inside_tlab_slow(),
+        inspect_tot_time_goes_allocate_outside_tlab());
       return result;
     }
   }
 
-  return allocate_outside_tlab(allocation);
+  #ifdef XHN_JVM_LINUX_X86
+  jlong start_heap = rdtsc();
+  #endif
+
+  HeapWord* heap_addr = allocate_outside_tlab(allocation);
+  _cnt_allocate_from_heap.inc();
+
+  #ifdef XHN_JVM_LINUX_X86
+  jlong end_heap = rdtsc();
+  _tot_time_goes_allocate_outside_tlab.add(end_heap - start_heap);
+  #endif
+
+  // Log info.
+  log_info(gc)("[MemAllocator State]\nCounter: dir(%lu), slow(%lu), heap(%lu)\nTimer: dir(%lu), slow(%lu), heap(%lu)\n",
+    inspect_cnt_allocate_inside_tlab_direct(),
+    inspect_cnt_allocate_inside_tlab_slow(),
+    inspect_cnt_allocate_from_heap(),
+    inspect_tot_time_goes_allocate_inside_tlab_direct_try(),
+    inspect_tot_time_goes_allocate_inside_tlab_slow(),
+    inspect_tot_time_goes_allocate_outside_tlab());
+
+  return heap_addr;
+  // return allocate_outside_tlab(allocation);
 }
 
 oop MemAllocator::allocate() const {
