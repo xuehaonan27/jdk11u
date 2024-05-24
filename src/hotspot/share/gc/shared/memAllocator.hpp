@@ -98,7 +98,7 @@ public:
   inline void dec() {
     Atomic::dec<__uint128_t>(&inner);
   }
-  inline void inspect() const {
+  inline __uint128_t inspect() const {
     return Atomic::load<__uint128_t>(&inner);
   }
   inline void clear() {
