@@ -103,8 +103,6 @@ protected:
   static AtomicJLong   _tot_time_goes_allocate_inside_tlab_slow;
   // Tlab allocation slow path failed, allocate from heap
   static AtomicJLong   _tot_time_goes_allocate_outside_tlab;
-  
-  static AtomicUInt128t test;
 
 public:
   inline size_t inspect_cnt_allocate_inside_tlab_direct() const {
