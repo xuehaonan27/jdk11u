@@ -32,6 +32,8 @@
 #include "utilities/macros.hpp"
 #include "runtime/atomic.hpp"
 
+#ifndef XHN_JVM_X86_ATOMIC_PROTOTYPE
+#define XHN_JVM_X86_ATOMIC_PROTOTYPE
 // A new type to constraint the behavior of counters.
 // Using inlines to reduce the cost of function calling.
 class AtomicSizet {
@@ -79,6 +81,7 @@ public:
     Atomic::store<jlong, jlong>(jlong(0), &inner);
   }
 };
+#endif
 
 // These fascilities are used for allocating, and initializing newly allocated objects.
 

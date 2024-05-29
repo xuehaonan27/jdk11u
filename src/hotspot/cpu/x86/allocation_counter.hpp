@@ -2,8 +2,11 @@
 #ifndef XHN_JVM_CPU_X86_ALLOCATION_COUNTER_HPP
 #define XHN_JVM_CPU_X86_ALLOCATION_COUNTER_HPP
 #include "../../share/runtime/atomic.hpp"
+#include "../../share/logging/log.hpp"
 #include "rdtsc_x86.hpp"
 
+#ifndef XHN_JVM_X86_ATOMIC_PROTOTYPE
+#define XHN_JVM_X86_ATOMIC_PROTOTYPE
 // A new type to constraint the behavior of counters.
 // Using inlines to reduce the cost of function calling.
 class AtomicSizet {
@@ -51,6 +54,7 @@ public:
     Atomic::store<jlong, jlong>(jlong(0), &inner);
   }
 };
+#endif
 
 class RuntimeAllocationCounter {
 private:
@@ -70,12 +74,12 @@ public:
     return Rdtsc::raw();
   }
 
-  void interpreter_fast_tlab_cnt_inc() {interpreter_fast_tlab_cnt.inc();}
-  void interpreter_fast_tlab_cnt_clear() {interpreter_fast_tlab_cnt.clear();}
+  static void interpreter_fast_tlab_cnt_inc() {interpreter_fast_tlab_cnt.inc();}
+  static void interpreter_fast_tlab_cnt_clear() {interpreter_fast_tlab_cnt.clear();}
   size_t get_interpreter_fast_tlab_cnt() {return interpreter_fast_tlab_cnt.inspect();}
 
-  void interpreter_fast_tlab_time_add(jlong start, jlong end) {interpreter_fast_tlab_time.add(end - start);}
-  void interpreter_fast_tlab_time_clear() {interpreter_fast_tlab_time.clear();}
+  static void interpreter_fast_tlab_time_add(jlong start, jlong end) {interpreter_fast_tlab_time.add(end - start);}
+  static void interpreter_fast_tlab_time_clear() {interpreter_fast_tlab_time.clear();}
   jlong get_interpreter_fast_tlab_time() {return interpreter_fast_tlab_time.inspect();}
 
   void log_gc_info() {
@@ -91,7 +95,7 @@ public:
     interpreter_fast_eden_cnt(AtomicSizet()),
     interpreter_fast_eden_time(AtomicJLong()),
     interpreter_slow_cnt(AtomicSizet()),
-    interpreter_slow_time(AtomicJLong()),
+    interpreter_slow_time(AtomicJLong())
   {}
 };
 
