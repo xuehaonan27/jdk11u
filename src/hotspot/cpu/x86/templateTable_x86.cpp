@@ -4061,80 +4061,21 @@ void TemplateTable::_new() {
 
     // Fast path allocation in tlab
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
-    // first save rax and rbx register
-    __ push(rax);
-    __ push(rdx);
-
-    // get end time, returned value in rax
-    __ rdtsc();
-    #ifndef AMD64
-    // 32 bit system, result already in eax(rax)
-    #else
-    // 64 bit system, combine the result into rax
-    __ shlq(rdx, 32);
-    __ orq(rax, rdx);
-    #endif
-
-/*
-    // reverse the time value and sub the value
-    #ifdef _LP64
-    __ negq(rax);
-    // __ xaddq((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
-    __ xaddq(
-      Address().plus_disp(RegisterOrConstant((intptr_t)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw)),
-    rax);
-    #else
-    __ negl(rax);
-    // __ xaddl((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
-    __ xaddl(
-      Address().plus_disp(RegisterOrConstant((intptr_t)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw)),
-    rax);
-    #endif
-*/
-
-    // restore
-    __ pop(rdx);
-    __ pop(rax);
+    __ call_VM(rdi, (address)RuntimeAllocationCounter::now); //  rdi = start
     #endif
 
     __ tlab_allocate(thread, rax, rdx, 0, rcx, rbx, slow_case);
 
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
-    // first save rax and rdx register
-    __ push(rax);
-    __ push(rdx);
-
-    // get end time, returned value in rax
-    __ rdtsc();
-    #ifndef AMD64
-    // 32 bit system, result already in eax(rax)
-    #else
-    // 64 bit system, combine the result into rax
-    __ shlq(rdx, 32);
-    __ orq(rax, rdx);
-    #endif
-
-/*
-    // add the value
-    #ifdef _LP64
-    __ xaddq(
-      Address().plus_disp(RegisterOrConstant((intptr_t)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw)),
-    rax);
-    #else
-    __ xaddl(
-      Address().plus_disp(RegisterOrConstant((intptr_t)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw)),
-    rax);
-    #endif
-*/
-
-    // restore
-     __ pop(rdx);
-    __ pop(rax);
-    
+    __ call_VM(rsi, (address)RuntimeAllocationCounter::now); // rsi = end
     // add counter
     #ifdef _LP64
+    __ subq(rdi, rsi);
+    __ xaddq((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rdi);
     __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
     #else
+    __ subl(rdi, rsi);
+    __ xaddl((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rdi);
     __ atomic_incl(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
     #endif
     #endif
