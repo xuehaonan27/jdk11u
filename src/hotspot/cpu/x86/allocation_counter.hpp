@@ -61,6 +61,7 @@ private:
   // Fast path tlab
   static AtomicSizet interpreter_fast_tlab_cnt;
   static AtomicJLong interpreter_fast_tlab_time;
+  static size_t interpreter_fast_tlab_cnt_raw;
 
   // Fast path eden
   static AtomicSizet interpreter_fast_eden_cnt;
@@ -83,9 +84,10 @@ public:
   jlong get_interpreter_fast_tlab_time() {return interpreter_fast_tlab_time.inspect();}
 
   void log_gc_info() {
-    log_info(gc)("[RuntimeAllocationCounter]\nCounter: fast_tlab(%lu)\nTimer: fast_tlab(%lu)\n",
+    log_info(gc)("[RuntimeAllocationCounter]\nCounter: fast_tlab(%lu) fast_tlab_raw(%lu)\nTimer: fast_tlab(%lu)\n",
       get_interpreter_fast_tlab_cnt(),
-      get_interpreter_fast_tlab_time()
+      interpreter_fast_tlab_cnt_raw
+      get_interpreter_fast_tlab_time(),
     );
   }
 

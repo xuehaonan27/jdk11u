@@ -4,6 +4,7 @@
 #include "allocation_counter.hpp"
 AtomicSizet RuntimeAllocationCounter::interpreter_fast_tlab_cnt = AtomicSizet();
 AtomicJLong RuntimeAllocationCounter::interpreter_fast_tlab_time = AtomicJLong();
+size_t RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw = 0;
 
 AtomicSizet RuntimeAllocationCounter::interpreter_fast_eden_cnt = AtomicSizet();
 AtomicJLong RuntimeAllocationCounter::interpreter_fast_eden_time = AtomicJLong();
