@@ -73,7 +73,7 @@ private:
 public:
   static size_t interpreter_fast_tlab_cnt_raw;
   static jlong interpreter_fast_tlab_time_raw;
-  static jlong now() {
+  static inline jlong now() {
     return Rdtsc::raw();
   }
 

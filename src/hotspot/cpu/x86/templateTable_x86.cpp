@@ -4064,7 +4064,7 @@ void TemplateTable::_new() {
     // first save rax and rbx register
     __ push(rax);
     // get start time, returned value in rax
-    __ call_VM_leaf(CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
+    __ call_VM(rax, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
     // reverse the time value and sub the value
     #ifdef _LP64
     __ negq(rax);
@@ -4089,7 +4089,7 @@ void TemplateTable::_new() {
     // first save rax register
     __ push(rax);
     // get end time, returned value in rax
-    __ call_VM_leaf(CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
+    __ call_VM(rax, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
     // add the value
     #ifdef _LP64
     // __ xaddq((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
