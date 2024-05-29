@@ -4063,8 +4063,10 @@ void TemplateTable::_new() {
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
     // first save rax and rbx register
     __ push(rax);
+    __ push(rdx);
     // get start time, returned value in rax
     __ call_VM(rax, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
+
     // reverse the time value and sub the value
     #ifdef _LP64
     __ negq(rax);
@@ -4080,6 +4082,7 @@ void TemplateTable::_new() {
     rax);
     #endif
     // restore rax and rbx
+    __ pop(rdx);
     __ pop(rax);
     #endif
 
@@ -4088,6 +4091,7 @@ void TemplateTable::_new() {
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
     // first save rax register
     __ push(rax);
+    __ push(rdx);
     // get end time, returned value in rax
     __ call_VM(rax, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
     // add the value
@@ -4103,6 +4107,7 @@ void TemplateTable::_new() {
     rax);
     #endif
     // restore rax
+     __ pop(rdx);
     __ pop(rax);
     
     // add counter
