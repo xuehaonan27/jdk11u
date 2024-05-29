@@ -4071,11 +4071,11 @@ void TemplateTable::_new() {
     // add counter
     #ifdef _LP64
     __ subq(rdi, rsi);
-    __ xaddq((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rdi);
+    __ call_VM(noreg, (address)RuntimeAllocationCounter::interpreter_fast_tlab_time_add, rdi);
     __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
     #else
     __ subl(rdi, rsi);
-    __ xaddl((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rdi);
+    __ call_VM(noreg, (address)RuntimeAllocationCounter::interpreter_fast_tlab_time_add, rdi);
     __ atomic_incl(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
     #endif
     #endif

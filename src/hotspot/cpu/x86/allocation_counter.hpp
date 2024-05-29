@@ -72,7 +72,6 @@ private:
   static AtomicJLong interpreter_slow_time;
 public:
   static size_t interpreter_fast_tlab_cnt_raw;
-  static jlong interpreter_fast_tlab_time_raw;
   static inline jlong now() {
     return Rdtsc::raw();
   }
@@ -81,16 +80,15 @@ public:
   static void interpreter_fast_tlab_cnt_clear() {interpreter_fast_tlab_cnt.clear();}
   size_t get_interpreter_fast_tlab_cnt() {return interpreter_fast_tlab_cnt.inspect();}
 
-  static void interpreter_fast_tlab_time_add(jlong start, jlong end) {interpreter_fast_tlab_time.add(end - start);}
+  static void interpreter_fast_tlab_time_add(jlong time) {interpreter_fast_tlab_time.add(time);}
   static void interpreter_fast_tlab_time_clear() {interpreter_fast_tlab_time.clear();}
   jlong get_interpreter_fast_tlab_time() {return interpreter_fast_tlab_time.inspect();}
 
   void log_gc_info() {
-    log_info(gc)("[RuntimeAllocationCounter]\nCounter: fast_tlab(%lu) fast_tlab_raw(%lu)\nTimer: fast_tlab(%lu) fast_tlab_raw(%lu)\n",
+    log_info(gc)("[RuntimeAllocationCounter]\nCounter: fast_tlab(%lu) fast_tlab_raw(%lu)\nTimer: fast_tlab(%lu)\n",
       get_interpreter_fast_tlab_cnt(),
       interpreter_fast_tlab_cnt_raw,
-      get_interpreter_fast_tlab_time(),
-      interpreter_fast_tlab_time_raw
+      get_interpreter_fast_tlab_time()
     );
   }
 
