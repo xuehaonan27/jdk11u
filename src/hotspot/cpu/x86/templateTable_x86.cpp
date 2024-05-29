@@ -4064,8 +4064,16 @@ void TemplateTable::_new() {
     // first save rax and rbx register
     __ push(rax);
     __ push(rdx);
-    // get start time, returned value in rax
-    __ call_VM(rax, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
+
+    // get end time, returned value in rax
+    __ rdtsc();
+    #ifndef AMD64
+    // 32 bit system, result already in eax(rax)
+    #else
+    // 64 bit system, combine the result into rax
+    __ shlq(rdx, 32);
+    __ orq(rax, rdx);
+    #endif
 
     // reverse the time value and sub the value
     #ifdef _LP64
@@ -4081,7 +4089,7 @@ void TemplateTable::_new() {
       Address().plus_disp(RegisterOrConstant((intptr_t)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw)),
     rax);
     #endif
-    // restore rax and rbx
+    // restore
     __ pop(rdx);
     __ pop(rax);
     #endif
@@ -4089,24 +4097,31 @@ void TemplateTable::_new() {
     __ tlab_allocate(thread, rax, rdx, 0, rcx, rbx, slow_case);
 
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
-    // first save rax register
+    // first save rax and rdx register
     __ push(rax);
     __ push(rdx);
+
     // get end time, returned value in rax
-    __ call_VM(rax, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
+    __ rdtsc();
+    #ifndef AMD64
+    // 32 bit system, result already in eax(rax)
+    #else
+    // 64 bit system, combine the result into rax
+    __ shlq(rdx, 32);
+    __ orq(rax, rdx);
+    #endif
+
     // add the value
     #ifdef _LP64
-    // __ xaddq((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
     __ xaddq(
       Address().plus_disp(RegisterOrConstant((intptr_t)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw)),
     rax);
     #else
-    // __ xaddl((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
     __ xaddl(
       Address().plus_disp(RegisterOrConstant((intptr_t)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw)),
     rax);
     #endif
-    // restore rax
+    // restore
      __ pop(rdx);
     __ pop(rax);
     
