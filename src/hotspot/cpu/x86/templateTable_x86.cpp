@@ -4084,9 +4084,9 @@ void TemplateTable::_new() {
     // add counter
     // __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_cnt_inc));
     #ifdef _LP64
-    __ atomic_incq(ExternalAddress(&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
+    __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
     #else
-    __ atomic_incl(ExternalAddress(&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
+    __ atomic_incl(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
     #endif
     #endif
 

@@ -61,7 +61,7 @@ private:
   // Fast path tlab
   static AtomicSizet interpreter_fast_tlab_cnt;
   static AtomicJLong interpreter_fast_tlab_time;
-  static size_t interpreter_fast_tlab_cnt_raw;
+  
 
   // Fast path eden
   static AtomicSizet interpreter_fast_eden_cnt;
@@ -71,6 +71,7 @@ private:
   static AtomicSizet interpreter_slow_cnt;
   static AtomicJLong interpreter_slow_time;
 public:
+  static size_t interpreter_fast_tlab_cnt_raw;
   static jlong now() {
     return Rdtsc::raw();
   }
