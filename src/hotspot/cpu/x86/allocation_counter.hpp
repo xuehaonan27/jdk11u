@@ -59,16 +59,16 @@ public:
 class RuntimeAllocationCounter {
 private:
   // Fast path tlab
-  AtomicSizet interpreter_fast_tlab_cnt;
-  AtomicJLong interpreter_fast_tlab_time;
+  static AtomicSizet interpreter_fast_tlab_cnt;
+  static AtomicJLong interpreter_fast_tlab_time;
 
   // Fast path eden
-  AtomicSizet interpreter_fast_eden_cnt;
-  AtomicJLong interpreter_fast_eden_time;
+  static AtomicSizet interpreter_fast_eden_cnt;
+  static AtomicJLong interpreter_fast_eden_time;
 
   // Allocation slow path
-  AtomicSizet interpreter_slow_cnt;
-  AtomicJLong interpreter_slow_time;
+  static AtomicSizet interpreter_slow_cnt;
+  static AtomicJLong interpreter_slow_time;
 public:
   jlong now() {
     return Rdtsc::raw();
@@ -89,14 +89,7 @@ public:
     );
   }
 
-  RuntimeAllocationCounter():
-    interpreter_fast_tlab_cnt(AtomicSizet()),
-    interpreter_fast_tlab_time(AtomicJLong()),
-    interpreter_fast_eden_cnt(AtomicSizet()),
-    interpreter_fast_eden_time(AtomicJLong()),
-    interpreter_slow_cnt(AtomicSizet()),
-    interpreter_slow_time(AtomicJLong())
-  {}
+  RuntimeAllocationCounter() {}
 };
 
 // Global counter
