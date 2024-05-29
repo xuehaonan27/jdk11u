@@ -4061,28 +4061,39 @@ void TemplateTable::_new() {
 
     // Fast path allocation in tlab
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
-    // start time
-    // 如何在这里跨过tlab_allocate存储一个64bit值还是一个问题
-    // 不过我确定tlab_allocate之后栈指针rsp是不变的, 所以可以将这个start time存放在栈上
-    // 现在的问题是使用哪个寄存器存放返回值, rax, rbx, rcx, rdx马上要用, 不能破坏
-    // rsp和rbp是栈帧指针也不行
-    // 所以使用rdi保存(?) 虽然这根本不符合calling convention
-    // 由于rdtsc是C的__asm__宏写的一个函数, 和JVM这一套C++伪汇编是不相容的
-    // 所以是要陷入JVM, 用call_VM更好一些, 让Java Compiler来调整寄存器的安排
-    // __ call_VM(rdi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
-    // __ push(rdi);
+    // first save rax and rbx register
+    __ push(rax);
+    // get start time, returned value in rax
+    __ call_VM_leaf(CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
+    // reverse the time value and sub the value
+    #ifdef _LP64
+    __ negq(rax);
+    __ xaddq((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    #else
+    __ negl(rax);
+    __ xaddl((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    #endif
+    // restore rax and rbx
+    __ pop(rax);
     #endif
 
     __ tlab_allocate(thread, rax, rdx, 0, rcx, rbx, slow_case);
 
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
-    // end time
-    // __ call_VM(rsi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); // end time
-    // __ pop(rdi); // start time
-    // __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add), rdi, rsi);
-
+    // first save rax register
+    __ push(rax);
+    // get end time, returned value in rax
+    __ call_VM_leaf(CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
+    // add the value
+    #ifdef _LP64
+    __ xaddq((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    #else
+    __ xaddl((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    #endif
+    // restore rax
+    __ pop(rax);
+    
     // add counter
-    // __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_cnt_inc));
     #ifdef _LP64
     __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
     #else
