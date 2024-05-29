@@ -4069,17 +4069,17 @@ void TemplateTable::_new() {
     // 所以使用rdi保存(?) 虽然这根本不符合calling convention
     // 由于rdtsc是C的__asm__宏写的一个函数, 和JVM这一套C++伪汇编是不相容的
     // 所以是要陷入JVM, 用call_VM更好一些, 让Java Compiler来调整寄存器的安排
-    __ call_VM(rdi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
-    __ push(rdi);
+    // __ call_VM(rdi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
+    // __ push(rdi);
     #endif
 
     __ tlab_allocate(thread, rax, rdx, 0, rcx, rbx, slow_case);
 
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
     // end time
-    __ call_VM(rsi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); // end time
-    __ pop(rdi); // start time
-    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add), rdi, rsi);
+    // __ call_VM(rsi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); // end time
+    // __ pop(rdi); // start time
+    // __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add), rdi, rsi);
 
     // add counter
     __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_cnt_inc));
