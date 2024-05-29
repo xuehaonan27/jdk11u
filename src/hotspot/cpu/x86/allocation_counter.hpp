@@ -70,7 +70,7 @@ private:
   static AtomicSizet interpreter_slow_cnt;
   static AtomicJLong interpreter_slow_time;
 public:
-  jlong now() {
+  static jlong now() {
     return Rdtsc::raw();
   }
 
