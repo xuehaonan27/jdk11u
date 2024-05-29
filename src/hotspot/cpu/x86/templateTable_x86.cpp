@@ -4075,6 +4075,7 @@ void TemplateTable::_new() {
     __ orq(rax, rdx);
     #endif
 
+/*
     // reverse the time value and sub the value
     #ifdef _LP64
     __ negq(rax);
@@ -4089,6 +4090,8 @@ void TemplateTable::_new() {
       Address().plus_disp(RegisterOrConstant((intptr_t)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw)),
     rax);
     #endif
+*/
+
     // restore
     __ pop(rdx);
     __ pop(rax);
@@ -4111,6 +4114,7 @@ void TemplateTable::_new() {
     __ orq(rax, rdx);
     #endif
 
+/*
     // add the value
     #ifdef _LP64
     __ xaddq(
@@ -4121,6 +4125,8 @@ void TemplateTable::_new() {
       Address().plus_disp(RegisterOrConstant((intptr_t)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw)),
     rax);
     #endif
+*/
+
     // restore
      __ pop(rdx);
     __ pop(rax);
