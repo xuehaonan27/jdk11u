@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "bitset": "cpp",
-        "list": "cpp"
+        "list": "cpp",
+        "mutex": "cpp"
     }
 }

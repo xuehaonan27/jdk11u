@@ -4059,23 +4059,32 @@ void TemplateTable::_new() {
       __ cmovq(Assembler::positive, rdx, rbx);
     }
 
+/*
+    The registers RAX, RCX, RDX, R8, R9, R10, R11 are considered volatile (caller-saved).
+    The registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, and R15 are considered nonvolatile (callee-saved).
+*/
+
     // Fast path allocation in tlab
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
-    __ call_VM(r10, (address)RuntimeAllocationCounter::now); //  rdi = start
+    __ call_VM(rdi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); //  rdi = start
     #endif
 
     __ tlab_allocate(thread, rax, rdx, 0, rcx, rbx, slow_case);
 
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
-    __ call_VM(r11, (address)RuntimeAllocationCounter::now); // rsi = end
+    __ call_VM(rsi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); // rsi = end
     // add counter
     #ifdef _LP64
-    __ subq(r10, r11);
-    __ call_VM(noreg, (address)RuntimeAllocationCounter::interpreter_fast_tlab_time_add, r10);
+    __ subq(rdi, rsi);
+    __ push(c_rarg1);
+    __ mov(c_rarg1, rdi);
+    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add), c_rarg1);
+    __ pop(c_rarg1);
+    
     __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
     #else
-    __ subl(r10, r11);
-    __ call_VM(noreg, (address)RuntimeAllocationCounter::interpreter_fast_tlab_time_add, r10);
+    __ subl(rdi, rsi);
+    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add, rdi));
     __ atomic_incl(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
     #endif
     #endif
