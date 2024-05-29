@@ -86,8 +86,8 @@ public:
   void log_gc_info() {
     log_info(gc)("[RuntimeAllocationCounter]\nCounter: fast_tlab(%lu) fast_tlab_raw(%lu)\nTimer: fast_tlab(%lu)\n",
       get_interpreter_fast_tlab_cnt(),
-      interpreter_fast_tlab_cnt_raw
-      get_interpreter_fast_tlab_time(),
+      interpreter_fast_tlab_cnt_raw,
+      get_interpreter_fast_tlab_time()
     );
   }
 
