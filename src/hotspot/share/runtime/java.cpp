@@ -94,6 +94,11 @@
 #include "gc/shared/memAllocator.hpp"
 #endif
 
+#define XHN_JVM_X86_ALLOCATION_COUNTER_HPP
+#ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
+#include "../../cpu/x86/allocation_counter.hpp"
+#endif
+
 GrowableArray<Method*>* collected_profiled_methods;
 
 int compare_methods(Method** a, Method** b) {
@@ -521,6 +526,10 @@ void before_exit(JavaThread* thread) {
   // So just create an arbitrary MemAllocator and log the info
   ObjAllocator allocator(NULL, 0, NULL);
   allocator.log_gc_info();
+#endif
+
+#ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
+  runtimeAllocationCounter.log_gc_info();
 #endif
 
   log_info(gc)("Majflt(exit jvm)=%ld", os::accumMajflt());

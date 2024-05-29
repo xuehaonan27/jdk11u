@@ -194,7 +194,7 @@ void C1_MacroAssembler::initialize_body(Register obj, Register len_in_bytes, int
   bind(done);
 }
 
-
+// This is allocate_object
 void C1_MacroAssembler::allocate_object(Register obj, Register t1, Register t2, int header_size, int object_size, Register klass, Label& slow_case) {
   assert(obj == rax, "obj must be in rax, for cmpxchg");
   assert_different_registers(obj, t1, t2); // XXX really?
@@ -263,6 +263,7 @@ void C1_MacroAssembler::initialize_object(Register obj, Register klass, Register
   verify_oop(obj);
 }
 
+// This is allocate array
 void C1_MacroAssembler::allocate_array(Register obj, Register len, Register t1, Register t2, int header_size, Address::ScaleFactor f, Register klass, Label& slow_case) {
   assert(obj == rax, "obj must be in rax, for cmpxchg");
   assert_different_registers(obj, len, t1, t2, klass);
