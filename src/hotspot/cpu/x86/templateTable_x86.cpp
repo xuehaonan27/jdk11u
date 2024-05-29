@@ -4068,10 +4068,12 @@ void TemplateTable::_new() {
     // reverse the time value and sub the value
     #ifdef _LP64
     __ negq(rax);
-    __ xaddq((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    // __ xaddq((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    __ xaddq(Address(noreg, (int)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw), rax);
     #else
     __ negl(rax);
-    __ xaddl((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    // __ xaddl((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    __ xaddl(Address(noreg, (int)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw), rax);
     #endif
     // restore rax and rbx
     __ pop(rax);
@@ -4086,9 +4088,11 @@ void TemplateTable::_new() {
     __ call_VM_leaf(CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
     // add the value
     #ifdef _LP64
-    __ xaddq((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    // __ xaddq((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    __ xaddq(Address(noreg, (int)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw), rax);
     #else
-    __ xaddl((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    // __ xaddl((address)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw, rax);
+    __ xaddl(Address(noreg, (int)&RuntimeAllocationCounter::interpreter_fast_tlab_time_raw), rax);
     #endif
     // restore rax
     __ pop(rax);
