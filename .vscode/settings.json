@@ -2,6 +2,7 @@
     "files.associations": {
         "bitset": "cpp",
         "list": "cpp",
-        "mutex": "cpp"
+        "mutex": "cpp",
+        "__locale": "cpp"
     }
 }

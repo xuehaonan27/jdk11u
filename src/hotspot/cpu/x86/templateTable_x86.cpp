@@ -4066,7 +4066,42 @@ void TemplateTable::_new() {
 
     // Fast path allocation in tlab
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
+    __ push(rax);
+    __ push(rbx);
+    __ push(rcx);
+    __ push(rdx);
+
     __ call_VM(rdi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); //  rdi = start
+
+    Label CheckCallVMRdtscRDX;
+    Label CheckCallVMRdtscRCX;
+    Label CheckCallVMRdtscRBX;
+    Label CheckCallVMRdtscRAX;
+
+    // __ xorq(rdx, Address(rsp, 0));
+    // __ jcc(Assembler::zero, CheckCallVMRdtscRDX);
+    // __ stop("RDX broken");
+    // __ bind(CheckCallVMRdtscRDX);
+
+    __ xorq(rcx, Address(rsp, 8));
+    __ jcc(Assembler::zero, CheckCallVMRdtscRCX);
+    __ stop("RCX broken");
+    __ bind(CheckCallVMRdtscRCX);
+
+    __ xorq(rbx, Address(rsp, 16));
+    __ jcc(Assembler::zero, CheckCallVMRdtscRBX);
+    __ stop("RBX broken");
+    __ bind(CheckCallVMRdtscRBX);
+
+    // __ xorq(rax, Address(rsp, 24));
+    // __ jcc(Assembler::zero, CheckCallVMRdtscRAX);
+    // __ stop("RAX broken");
+    // __ bind(CheckCallVMRdtscRAX);
+
+    __ pop(rdx);
+    __ pop(rcx);
+    __ pop(rbx);
+    __ pop(rax);
     #endif
 
     __ tlab_allocate(thread, rax, rdx, 0, rcx, rbx, slow_case);
