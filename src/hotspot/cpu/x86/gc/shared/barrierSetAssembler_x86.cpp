@@ -246,8 +246,15 @@ void BarrierSetAssembler::tlab_allocate_my(MacroAssembler* masm,
     __ lea(end, Address(obj, var_size_in_bytes, Address::times_1));
   }
   __ cmpptr(end, Address(thread, JavaThread::tlab_end_offset()));
-  __ jcc(Assembler::above, slow_case);
-  __ stop("Boom");
+  // __ jcc(Assembler::above, slow_case);
+
+  Label Temp;
+  __ jcc(Assembler::belowEqual, Temp);
+  __ pop(rdi);
+  __ jmp(slow_case);
+  __ bind(Temp);
+
+  // __ stop("Boom");
   // update the tlab top pointer
   __ movptr(Address(thread, JavaThread::tlab_top_offset()), end);
 
