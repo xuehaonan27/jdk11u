@@ -9,12 +9,12 @@
 #define XHN_JVM_X86_ATOMIC_PROTOTYPE
 // A new type to constraint the behavior of counters.
 // Using inlines to reduce the cost of function calling.
-class AtomicSizet {
+class AtomicSizet2 {
 private:
   size_t inner;
 public:
-  AtomicSizet(): inner(0) {}
-  AtomicSizet(size_t inner): inner(inner) {}
+  AtomicSizet2(): inner(0) {}
+  AtomicSizet2(size_t inner): inner(inner) {}
   inline void add(size_t rhs) {
     Atomic::add<size_t, size_t>(rhs, &inner);
   }
@@ -35,12 +35,12 @@ public:
   }
 };
 
-class AtomicJLong {
+class AtomicJlong2 {
 private:
   jlong inner;
 public:
-  AtomicJLong(): inner(0) {}
-  AtomicJLong(jlong inner): inner(inner) {}
+  AtomicJlong2(): inner(0) {}
+  AtomicJlong2(jlong inner): inner(inner) {}
   inline void add(jlong rhs) {
     // Atomic::add<jlong, jlong>(rhs, &inner);
     Atomic::store<jlong, jlong>(rhs, &inner);
@@ -63,17 +63,17 @@ public:
 class RuntimeAllocationCounter {
 private:
   // Fast path tlab
-  static AtomicSizet interpreter_fast_tlab_cnt;
-  static AtomicJLong interpreter_fast_tlab_time;
+  static AtomicSizet2 interpreter_fast_tlab_cnt;
+  static AtomicJlong2 interpreter_fast_tlab_time;
   
 
   // Fast path eden
-  static AtomicSizet interpreter_fast_eden_cnt;
-  static AtomicJLong interpreter_fast_eden_time;
+  static AtomicSizet2 interpreter_fast_eden_cnt;
+  static AtomicJlong2 interpreter_fast_eden_time;
 
   // Allocation slow path
-  static AtomicSizet interpreter_slow_cnt;
-  static AtomicJLong interpreter_slow_time;
+  static AtomicSizet2 interpreter_slow_cnt;
+  static AtomicJlong2 interpreter_slow_time;
 public:
   static size_t interpreter_fast_tlab_cnt_raw;
   static inline jlong now() {
