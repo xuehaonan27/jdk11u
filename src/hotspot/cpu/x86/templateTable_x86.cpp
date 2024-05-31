@@ -4107,13 +4107,13 @@ void TemplateTable::_new() {
     __ tlab_allocate_my(thread, rax, rdx, 0, rcx, rbx, slow_case);
 
     #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
-    __ call_VM(rsi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); // rsi = end
+    // __ call_VM(rsi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); // rsi = end
     // add counter
     #ifdef _LP64
-    __ subq(rdi, rsi);
+    // __ subq(rdi, rsi);
     // __ push(c_rarg1);
     // __ mov(c_rarg1, rdi);
-    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add), c_rarg1);
+    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add), rdi);
     // __ pop(c_rarg1);
     
     __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
