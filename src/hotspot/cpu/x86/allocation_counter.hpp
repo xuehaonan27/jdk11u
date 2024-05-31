@@ -42,10 +42,14 @@ public:
   AtomicJLong(): inner(0) {}
   AtomicJLong(jlong inner): inner(inner) {}
   inline void add(jlong rhs) {
-    Atomic::add<jlong, jlong>(rhs, &inner);
+    // Atomic::add<jlong, jlong>(rhs, &inner);
+    Atomic::store<jlong, jlong>(rhs, &inner);
   }
   inline void sub(jlong rhs) {
     Atomic::sub<jlong, jlong>(rhs, &inner);
+  }
+  inline void store(jlong rhs) {
+    Atomic::store<jlong, jlong>(rhs, &inner);
   }
   inline jlong inspect() const {
     return Atomic::load<jlong>(&inner);
@@ -80,6 +84,7 @@ public:
   static void interpreter_fast_tlab_cnt_clear() {interpreter_fast_tlab_cnt.clear();}
   size_t get_interpreter_fast_tlab_cnt() {return interpreter_fast_tlab_cnt.inspect();}
 
+  static void interpreter_fast_tlab_time_set(jlong time) {interpreter_fast_tlab_time.store(time);}
   static void interpreter_fast_tlab_time_add(jlong time) {interpreter_fast_tlab_time.add(time);}
   static void interpreter_fast_tlab_time_clear() {interpreter_fast_tlab_time.clear();}
   jlong get_interpreter_fast_tlab_time() {return interpreter_fast_tlab_time.inspect();}

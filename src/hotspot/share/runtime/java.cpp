@@ -450,6 +450,21 @@ void print_statistics() {
 
 #endif
 
+inline jlong get_now_time() {
+#ifndef AMD64
+  // 64 bit result in edx:eax
+  uint64_t res;
+  __asm__ __volatile__ ("rdtsc" : "=A" (res));
+  return (jlong)res;
+#else
+  uint64_t res;
+  uint32_t ts1, ts2;
+  __asm__ __volatile__ ("rdtsc" : "=a" (ts1), "=d" (ts2));
+  res = ((uint64_t)ts1 | (uint64_t)ts2 << 32);
+  return (jlong)res;
+#endif // AMD64
+}
+
 // Note: before_exit() can be executed only once, if more than one threads
 //       are trying to shutdown the VM at the same time, only one thread
 //       can run before_exit() and all other threads must wait.
@@ -530,6 +545,7 @@ void before_exit(JavaThread* thread) {
 
 #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
   runtimeAllocationCounter.log_gc_info();
+  log_info(gc)("Now time: %ld", get_now_time());
 #endif
 
   log_info(gc)("Majflt(exit jvm)=%ld", os::accumMajflt());
