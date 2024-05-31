@@ -35,12 +35,12 @@ public:
   }
 };
 
-class AtomicJlong2 {
+class AtomicJLong2 {
 private:
   jlong inner;
 public:
-  AtomicJlong2(): inner(0) {}
-  AtomicJlong2(jlong inner): inner(inner) {}
+  AtomicJLong2(): inner(0) {}
+  AtomicJLong2(jlong inner): inner(inner) {}
   inline void add(jlong rhs) {
     // Atomic::add<jlong, jlong>(rhs, &inner);
     Atomic::store<jlong, jlong>(rhs, &inner);
@@ -64,16 +64,16 @@ class RuntimeAllocationCounter {
 private:
   // Fast path tlab
   static AtomicSizet2 interpreter_fast_tlab_cnt;
-  static AtomicJlong2 interpreter_fast_tlab_time;
+  static AtomicJLong2 interpreter_fast_tlab_time;
   
 
   // Fast path eden
   static AtomicSizet2 interpreter_fast_eden_cnt;
-  static AtomicJlong2 interpreter_fast_eden_time;
+  static AtomicJLong2 interpreter_fast_eden_time;
 
   // Allocation slow path
   static AtomicSizet2 interpreter_slow_cnt;
-  static AtomicJlong2 interpreter_slow_time;
+  static AtomicJLong2 interpreter_slow_time;
 public:
   static size_t interpreter_fast_tlab_cnt_raw;
   static inline jlong now() {
