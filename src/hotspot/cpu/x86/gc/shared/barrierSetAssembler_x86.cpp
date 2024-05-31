@@ -216,6 +216,48 @@ void BarrierSetAssembler::try_resolve_jobject_in_native(MacroAssembler* masm, Re
   __ movptr(obj, Address(obj, 0));
 }
 
+
+void BarrierSetAssembler::tlab_allocate_my(MacroAssembler* masm,
+                                        Register thread, Register obj,
+                                        Register var_size_in_bytes,
+                                        int con_size_in_bytes,
+                                        Register t1,
+                                        Register t2,
+                                        Label& slow_case) {
+  assert_different_registers(obj, t1, t2);
+  assert_different_registers(obj, var_size_in_bytes, t1);
+  Register end = t2;
+  if (!thread->is_valid()) {
+#ifdef _LP64
+    thread = r15_thread;
+#else
+    assert(t1->is_valid(), "need temp reg");
+    thread = t1;
+    __ get_thread(thread);
+#endif
+  }
+
+  __ verify_tlab();
+
+  __ movptr(obj, Address(thread, JavaThread::tlab_top_offset()));
+  if (var_size_in_bytes == noreg) {
+    __ lea(end, Address(obj, con_size_in_bytes));
+  } else {
+    __ lea(end, Address(obj, var_size_in_bytes, Address::times_1));
+  }
+  __ cmpptr(end, Address(thread, JavaThread::tlab_end_offset()));
+  __ jcc(Assembler::above, slow_case);
+
+  // update the tlab top pointer
+  __ movptr(Address(thread, JavaThread::tlab_top_offset()), end);
+
+  // recover var_size_in_bytes if necessary
+  if (var_size_in_bytes == end) {
+    __ subptr(var_size_in_bytes, obj);
+  }
+  __ verify_tlab();
+}
+
 void BarrierSetAssembler::tlab_allocate(MacroAssembler* masm,
                                         Register thread, Register obj,
                                         Register var_size_in_bytes,

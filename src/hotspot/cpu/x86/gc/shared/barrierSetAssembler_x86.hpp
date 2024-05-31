@@ -65,6 +65,13 @@ public:
   virtual void try_resolve_jobject_in_native(MacroAssembler* masm, Register jni_env,
                                              Register obj, Register tmp, Label& slowpath);
 
+  virtual void tlab_allocate_my(MacroAssembler* masm,
+                             Register thread, Register obj,
+                             Register var_size_in_bytes,
+                             int con_size_in_bytes,
+                             Register t1, Register t2,
+                             Label& slow_case);
+
   virtual void tlab_allocate(MacroAssembler* masm,
                              Register thread, Register obj,
                              Register var_size_in_bytes,
