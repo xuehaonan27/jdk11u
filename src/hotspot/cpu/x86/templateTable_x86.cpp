@@ -4198,6 +4198,9 @@ void TemplateTable::_new() {
     // Allocation in the shared Eden, if allowed.
     //
     // rdx: instance size in bytes
+    #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
+    __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
+    #endif
     __ eden_allocate(thread, rax, rdx, 0, rbx, slow_case);
     // Fast path but when disabling tlab
   }
@@ -4269,6 +4272,10 @@ void TemplateTable::_new() {
   __ bind(slow_case);
   __ pop(rcx);   // restore stack pointer to what it was when we came in.
   __ bind(slow_case_no_pop);
+
+  #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
+  __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_slow_cnt_raw));
+  #endif
 
   Register rarg1 = LP64_ONLY(c_rarg1) NOT_LP64(rax);
   Register rarg2 = LP64_ONLY(c_rarg2) NOT_LP64(rdx);

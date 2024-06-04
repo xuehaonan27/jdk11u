@@ -76,6 +76,8 @@ private:
   static AtomicJLong2 interpreter_slow_time;
 public:
   static size_t interpreter_fast_tlab_cnt_raw;
+  static size_t interpreter_fast_eden_cnt_raw;
+  static size_t interpreter_slow_cnt_raw;
   static inline jlong now() {
     return Rdtsc::raw();
   }
@@ -90,9 +92,10 @@ public:
   jlong get_interpreter_fast_tlab_time() {return interpreter_fast_tlab_time.inspect();}
 
   void log_gc_info() {
-    log_info(gc)("[RuntimeAllocationCounter]\nCounter: fast_tlab(%lu) fast_tlab_raw(%lu)\nTimer: fast_tlab(%lu)\n",
-      get_interpreter_fast_tlab_cnt(),
+    log_info(gc)("[RuntimeAllocationCounter]\nCounter: fast_tlab_raw(%lu) fast_eden_raw(%lu) slow_raw(%lu)\nTimer: fast_tlab(%lu)\n",
       interpreter_fast_tlab_cnt_raw,
+      interpreter_fast_eden_cnt_raw,
+      interpreter_slow_cnt_raw,
       get_interpreter_fast_tlab_time()
     );
   }
