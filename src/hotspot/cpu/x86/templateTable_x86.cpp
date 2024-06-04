@@ -4184,7 +4184,31 @@ void TemplateTable::_new() {
 #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
   __ push(rax);
   __ push(rdx);
+
+  __ push(rbx);
+  __ push(rcx);
+  __ push(r8);
+  __ push(r9);
+  __ push(r10);
+  __ push(r11);
+  __ push(r12);
+  __ push(r13);
+  __ push(r14);
+  __ push(r15);
+
   __ call_VM(rdi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
+  
+  __ pop(r15);
+  __ pop(r14);
+  __ pop(r13);
+  __ pop(r12);
+  __ pop(r11);
+  __ pop(r10);
+  __ pop(r9);
+  __ pop(r8);
+  __ pop(rcx);
+  __ pop(rbx);
+ 
   __ pop(rdx);
   __ pop(rax);
 #endif
@@ -4200,7 +4224,31 @@ void TemplateTable::_new() {
 #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
   __ push(rax);
   __ push(rdx);
+
+  __ push(rbx);
+  __ push(rcx);
+  __ push(r8);
+  __ push(r9);
+  __ push(r10);
+  __ push(r11);
+  __ push(r12);
+  __ push(r13);
+  __ push(r14);
+  __ push(r15);
+
   __ call_VM(rsi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
+  
+  __ pop(r15);
+  __ pop(r14);
+  __ pop(r13);
+  __ pop(r12);
+  __ pop(r11);
+  __ pop(r10);
+  __ pop(r9);
+  __ pop(r8);
+  __ pop(rcx);
+  __ pop(rbx);
+
   __ pop(rdx);
   __ pop(rax);
 #ifdef _LP64
