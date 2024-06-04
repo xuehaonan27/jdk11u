@@ -40,12 +40,24 @@ public:
   static void interpreter_fast_tlab_time_clear() {interpreter_fast_tlab_time.clear();}
   jlong get_interpreter_fast_tlab_time() {return interpreter_fast_tlab_time.inspect();}
 
+  static void interpreter_fast_eden_time_set(jlong time) {interpreter_fast_eden_time.store(time);}
+  static void interpreter_fast_eden_time_add(jlong time) {interpreter_fast_eden_time.add(time);}
+  static void interpreter_fast_eden_time_clear() {interpreter_fast_eden_time.clear();}
+  jlong get_interpreter_fast_eden_time() {return interpreter_fast_eden_time.inspect();}
+
+  static void interpreter_slow_time_set(jlong time) {interpreter_slow_time.store(time);}
+  static void interpreter_slow_time_add(jlong time) {interpreter_slow_time.add(time);}
+  static void interpreter_slow_time_clear() {interpreter_slow_time.clear();}
+  jlong get_interpreter_slow_time() {return interpreter_slow_time.inspect();}
+
   void log_gc_info() {
-    log_info(gc)("[RuntimeAllocationCounter]\nCounter: fast_tlab_raw(%lu) fast_eden_raw(%lu) slow_raw(%lu)\nTimer: fast_tlab(%lu)\n",
+    log_info(gc)("[RuntimeAllocationCounter]\nCounter: fast_tlab_raw(%lu) fast_eden_raw(%lu) slow_raw(%lu)\nTimer: fast_tlab(%lu) fast_eden(%lu) slow(%lu)\n",
       interpreter_fast_tlab_cnt_raw,
       interpreter_fast_eden_cnt_raw,
       interpreter_slow_cnt_raw,
-      get_interpreter_fast_tlab_time()
+      get_interpreter_fast_tlab_time(),
+      get_interpreter_fast_eden_time(),
+      get_interpreter_slow_time()
     );
   }
 

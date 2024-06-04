@@ -4184,7 +4184,7 @@ void TemplateTable::_new() {
 #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
   __ push(rax);
   __ push(rdx);
-  __ call_VM(r10, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); //  r10 = start
+  __ call_VM(rdi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
   __ pop(rdx);
   __ pop(rax);
 #endif
@@ -4200,17 +4200,17 @@ void TemplateTable::_new() {
 #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
   __ push(rax);
   __ push(rdx);
-  __ call_VM(r11, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); //  r11 = end
+  __ call_VM(rsi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now));
   __ pop(rdx);
   __ pop(rax);
 #ifdef _LP64
-    __ subq(r11, r10);
-    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add), r11);
-    __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
+    __ subq(rsi, rdi);
+    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_slow_time_add), rsi);
+    __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_slow_cnt_raw));
 #else
-    __ subl(r11, r10);
-    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add, r11));
-    __ atomic_incl(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
+    __ subl(rsi, rdi);
+    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_slow_time_add, rsi));
+    __ atomic_incl(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_slow_cnt_raw));
 #endif // _LP64
 #endif
 
