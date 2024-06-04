@@ -4181,9 +4181,14 @@ void TemplateTable::_new() {
   __ pop(rcx);   // restore stack pointer to what it was when we came in.
   __ bind(slow_case_no_pop);
 
-  #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
-  __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_slow_cnt_raw));
-  #endif
+#ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
+  __ push(rdi);
+  __ push(rax);
+  __ push(rdx);
+  __ call_VM(rdi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); //  rdi = start
+  __ pop(rdx);
+  __ pop(rax);
+#endif
 
   Register rarg1 = LP64_ONLY(c_rarg1) NOT_LP64(rax);
   Register rarg2 = LP64_ONLY(c_rarg2) NOT_LP64(rdx);
@@ -4192,6 +4197,24 @@ void TemplateTable::_new() {
   __ get_unsigned_2_byte_index_at_bcp(rarg2, 1);
   call_VM(rax, CAST_FROM_FN_PTR(address, InterpreterRuntime::_new), rarg1, rarg2);
    __ verify_oop(rax);
+
+#ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
+  __ push(rax);
+  __ push(rdx);
+  __ call_VM(rsi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); //  rsi = end
+  __ pop(rdx);
+  __ pop(rax);
+  __ pop(rdi);
+#ifdef _LP64
+    __ subq(rsi, rdi);
+    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add), rsi);
+    __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
+#else
+    __ subl(rsi, rdi);
+    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add, rsi));
+    __ atomic_incl(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
+#endif // _LP64
+#endif
 
   // continue
   __ bind(done);
