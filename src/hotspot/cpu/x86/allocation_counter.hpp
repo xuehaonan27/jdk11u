@@ -58,7 +58,6 @@ public:
     Atomic::store<jlong, jlong>(jlong(0), &inner);
   }
 };
-#endif
 
 class RuntimeAllocationCounter {
 private:
@@ -105,5 +104,5 @@ public:
 
 // Global counter
 static RuntimeAllocationCounter runtimeAllocationCounter;
-
+#endif
 #endif
