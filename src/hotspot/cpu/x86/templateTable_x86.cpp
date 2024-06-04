@@ -4065,127 +4065,35 @@ void TemplateTable::_new() {
 */
 
     // Fast path allocation in tlab
-    #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
+#ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
     __ push(rdi);
     __ push(rax);
-    __ push(rbx);
-    __ push(rcx);
     __ push(rdx);
-    // __ push(rdi);
-    __ push(rsi);
-    __ push(r8);
-    __ push(r9);
-    __ push(r10);
-    __ push(r11);
-    __ push(r12);
-    __ push(r13);
-    __ push(r14);
-    __ push(r15);
-
     __ call_VM(rdi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); //  rdi = start
-    // __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
-    
-    __ pop(r15);
-    __ pop(r14);
-    __ pop(r13);
-    __ pop(r12);
-    __ pop(r11);
-    __ pop(r10);
-    __ pop(r9);
-    __ pop(r8);
-    __ pop(rsi);
-    // __ pop(rdi);
     __ pop(rdx);
-    __ pop(rcx);
-    __ pop(rbx);
     __ pop(rax);
-    
-    // Label CheckCallVMThread;
-    // __ xorq(thread, Address(rsp, 0));
-    // __ jcc(Assembler::zero, CheckCallVMThread);
-    // __ stop("Thread broken");
-    // __ bind(CheckCallVMThread);
-    // __ pop(thread);
-  
-    // Label CheckCallVMRdtscRDX;
-    // Label CheckCallVMRdtscRCX;
-    // Label CheckCallVMRdtscRBX;
-    // Label CheckCallVMRdtscRAX;
-
-    // __ xorq(rdx, Address(rsp, 0));
-    // __ jcc(Assembler::zero, CheckCallVMRdtscRDX);
-    // __ stop("RDX broken");
-    // __ bind(CheckCallVMRdtscRDX);
-
-    // __ xorq(rcx, Address(rsp, 8));
-    // __ jcc(Assembler::zero, CheckCallVMRdtscRCX);
-    // __ stop("RCX broken");
-    // __ bind(CheckCallVMRdtscRCX);
-
-    // __ xorq(rbx, Address(rsp, 16));
-    // __ jcc(Assembler::zero, CheckCallVMRdtscRBX);
-    // __ stop("RBX broken");
-    // __ bind(CheckCallVMRdtscRBX);
-
-    // __ xorq(rax, Address(rsp, 24));
-    // __ jcc(Assembler::zero, CheckCallVMRdtscRAX);
-    // __ stop("RAX broken");
-    // __ bind(CheckCallVMRdtscRAX);
-
-    // __ pop(rdx);
-    // __ pop(rcx);
-    // __ pop(rbx);
-    // __ pop(rax);
-    #endif
+#endif
 
     __ tlab_allocate_my(thread, rax, rdx, 0, rcx, rbx, slow_case);
 
-    #ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
+#ifdef XHN_JVM_X86_ALLOCATION_COUNTER_HPP
     __ push(rax);
-    __ push(rbx);
-    __ push(rcx);
     __ push(rdx);
-    // __ push(rdi);
-    __ push(rsi);
-    __ push(r8);
-    __ push(r9);
-    __ push(r10);
-    __ push(r11);
-    __ push(r12);
-    __ push(r13);
-    __ push(r14);
-    __ push(r15);
-
     __ call_VM(rsi, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::now)); // rsi = end
     // add counter
-    #ifdef _LP64
-    // __ subq(rsi, rdi);
-    // __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add), rsi);
-    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_set), rsi);
+#ifdef _LP64
+    __ subq(rsi, rdi);
+    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add), rsi);
     __ atomic_incq(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
-
-    __ pop(r15);
-    __ pop(r14);
-    __ pop(r13);
-    __ pop(r12);
-    __ pop(r11);
-    __ pop(r10);
-    __ pop(r9);
-    __ pop(r8);
-    __ pop(rsi);
-    // __ pop(rdi);
+#else
+    __ subl(rsi, rdi);
+    __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add, rsi));
+    __ atomic_incl(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
+#endif // _LP64
     __ pop(rdx);
-    __ pop(rcx);
-    __ pop(rbx);
     __ pop(rax);
     __ pop(rdi);
-    #else
-    // __ subl(rdi, rsi);
-    // __ call_VM(noreg, CAST_FROM_FN_PTR(address, RuntimeAllocationCounter::interpreter_fast_tlab_time_add, rdi));
-    __ atomic_incl(ExternalAddress((address)&RuntimeAllocationCounter::interpreter_fast_tlab_cnt_raw));
-    #endif
-    #endif
-
+#endif
 
     if (ZeroTLAB) {
       // the fields have been already cleared
