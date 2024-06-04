@@ -3,76 +3,26 @@
 #define XHN_JVM_CPU_X86_ALLOCATION_COUNTER_HPP
 #include "../../share/runtime/atomic.hpp"
 #include "../../share/logging/log.hpp"
+#include "../../share/gc/shared/memAllocator.hpp"
 #include "rdtsc_x86.hpp"
 
-#ifndef XHN_JVM_X86_ATOMIC_PROTOTYPE
-#define XHN_JVM_X86_ATOMIC_PROTOTYPE
-// A new type to constraint the behavior of counters.
-// Using inlines to reduce the cost of function calling.
-class AtomicSizet2 {
-private:
-  size_t inner;
-public:
-  AtomicSizet2(): inner(0) {}
-  AtomicSizet2(size_t inner): inner(inner) {}
-  inline void add(size_t rhs) {
-    Atomic::add<size_t, size_t>(rhs, &inner);
-  }
-  inline void sub(size_t rhs) {
-    Atomic::sub<size_t, size_t>(rhs, &inner);
-  }
-  inline void inc() {
-    Atomic::inc<size_t>(&inner);
-  }
-  inline void dec() {
-    Atomic::dec<size_t>(&inner);
-  }
-  inline size_t inspect() const {
-    return Atomic::load<size_t>(&inner);
-  }
-  inline void clear() {
-    Atomic::store<size_t, size_t>(size_t(0), &inner);
-  }
-};
-
-class AtomicJLong2 {
-private:
-  jlong inner;
-public:
-  AtomicJLong2(): inner(0) {}
-  AtomicJLong2(jlong inner): inner(inner) {}
-  inline void add(jlong rhs) {
-    // Atomic::add<jlong, jlong>(rhs, &inner);
-    Atomic::store<jlong, jlong>(rhs, &inner);
-  }
-  inline void sub(jlong rhs) {
-    Atomic::sub<jlong, jlong>(rhs, &inner);
-  }
-  inline void store(jlong rhs) {
-    Atomic::store<jlong, jlong>(rhs, &inner);
-  }
-  inline jlong inspect() const {
-    return Atomic::load<jlong>(&inner);
-  }
-  inline void clear() {
-    Atomic::store<jlong, jlong>(jlong(0), &inner);
-  }
-};
+class AtomicSizet;
+class AtomicJLong;
 
 class RuntimeAllocationCounter {
 private:
   // Fast path tlab
-  static AtomicSizet2 interpreter_fast_tlab_cnt;
-  static AtomicJLong2 interpreter_fast_tlab_time;
+  static AtomicSizet interpreter_fast_tlab_cnt;
+  static AtomicJLong interpreter_fast_tlab_time;
   
 
   // Fast path eden
-  static AtomicSizet2 interpreter_fast_eden_cnt;
-  static AtomicJLong2 interpreter_fast_eden_time;
+  static AtomicSizet interpreter_fast_eden_cnt;
+  static AtomicJLong interpreter_fast_eden_time;
 
   // Allocation slow path
-  static AtomicSizet2 interpreter_slow_cnt;
-  static AtomicJLong2 interpreter_slow_time;
+  static AtomicSizet interpreter_slow_cnt;
+  static AtomicJLong interpreter_slow_time;
 public:
   static size_t interpreter_fast_tlab_cnt_raw;
   static size_t interpreter_fast_eden_cnt_raw;
@@ -104,5 +54,4 @@ public:
 
 // Global counter
 static RuntimeAllocationCounter runtimeAllocationCounter;
-#endif
 #endif
