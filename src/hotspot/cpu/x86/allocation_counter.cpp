@@ -14,4 +14,6 @@ AtomicJLong RuntimeAllocationCounter::interpreter_fast_eden_time = AtomicJLong()
 
 AtomicSizet RuntimeAllocationCounter::interpreter_slow_cnt = AtomicSizet();
 AtomicJLong RuntimeAllocationCounter::interpreter_slow_time = AtomicJLong();
+
+static RuntimeAllocationCounter runtimeAllocationCounter = RuntimeAllocationCounter();
 #endif
