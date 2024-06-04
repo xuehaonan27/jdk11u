@@ -52,6 +52,4 @@ public:
   RuntimeAllocationCounter() {}
 };
 
-// Global counter
-static RuntimeAllocationCounter runtimeAllocationCounter;
 #endif

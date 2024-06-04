@@ -54,6 +54,9 @@ public:
   inline void dec() {
     Atomic::dec<size_t>(&inner);
   }
+  inline void store(size_t rhs) {
+    Atomic::store<size_t, size_t>(size_t(rhs), &inner);
+  }
   inline size_t inspect() const {
     return Atomic::load<size_t>(&inner);
   }
@@ -76,6 +79,9 @@ public:
   }
   inline jlong inspect() const {
     return Atomic::load<jlong>(&inner);
+  }
+  inline void store(jlong rhs) {
+    Atomic::store<jlong, jlong>(jlong(rhs), &inner);
   }
   inline void clear() {
     Atomic::store<jlong, jlong>(jlong(0), &inner);
